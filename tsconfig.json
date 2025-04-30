@@ -13,9 +13,9 @@
     "isolatedModules": true,
     "jsx": "preserve",
     "incremental": true,
-    "baseUrl": "src",
+    "baseUrl": ".",                     // Fix: set to root of project
     "paths": {
-      "@/*": ["*"]
+      "@/*": ["src/*"]                  // Fix: map @/ to src/
     },
     "plugins": [
       {
