@@ -1,4 +1,3 @@
-'use client';
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent } from "@/components/ui/card";
