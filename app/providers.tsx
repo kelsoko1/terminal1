@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { AuthProvider } from '@/lib/auth/auth-context';
+import { AuthProvider } from '../lib/auth/auth-context';
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [isHydrated, setIsHydrated] = useState(false);
