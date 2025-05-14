@@ -112,6 +112,18 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
                 ? "Don't have an account? Register"
                 : 'Already have an account? Login'}
             </Button>
+            {isLogin && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  onClose();
+                  window.location.href = '/investor-signup';
+                }}
+              >
+                Sign up as an Investor
+              </Button>
+            )}
           </div>
         </form>
       </DialogContent>

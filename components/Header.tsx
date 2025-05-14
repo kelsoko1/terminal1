@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store';
 import { Button } from '@/components/ui/button';
-import { AuthModal } from '@/components/AuthModal';
+
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { Menu, ArrowLeft, Wallet, Search, BarChart2, LineChart, DollarSign, User } from 'lucide-react';
 import { usePathname } from 'next/navigation';
@@ -37,7 +37,7 @@ export function Header() {
   const router = useRouter();
   const { user, setUser } = useStore();
   const { isAuthenticated, logout } = useAuth();
-  const [showAuthModal, setShowAuthModal] = useState(false);
+
   const [menuOpen, setMenuOpen] = useState(false);
   const [showSearchMenu, setShowSearchMenu] = useState(false);
   const pathname = usePathname();
@@ -130,9 +130,16 @@ export function Header() {
             </div>
           ) : (
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={() => setShowAuthModal(true)}>
-                Login
-              </Button>
+              <Link href="/login">
+                <Button variant="outline" size="sm">
+                  Login
+                </Button>
+              </Link>
+              <Link href="/investor-signup">
+                <Button variant="default" size="sm">
+                  Sign Up
+                </Button>
+              </Link>
               <ThemeToggle />
             </div>
           )}
@@ -181,10 +188,7 @@ export function Header() {
         <SearchMenu isOpen={showSearchMenu} onClose={() => setShowSearchMenu(false)} />
       )}
 
-      {/* Auth Modal */}
-      {showAuthModal && (
-        <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
-      )}
+
     </header>
   );
 }

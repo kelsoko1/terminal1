@@ -11,14 +11,45 @@ datasource db {
 }
 
 model User {
-  id            String         @id @default(uuid())
-  email         String         @unique
-  name          String?
-  password      String
-  role          UserRole       @default(USER)
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  subscriptions Subscription[]
+  id                String         @id @default(uuid())
+  email             String         @unique
+  name              String?
+  password          String
+  role              UserRole       @default(USER)
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  subscriptions     Subscription[]
+  organizationId    String?
+  organization      Organization?  @relation(fields: [organizationId], references: [id])
+  department        String?
+  position          String?
+  employeeId        String?
+  contactNumber     String?
+  status            UserStatus     @default(ACTIVE)
+  permissions       String[]       @default([])
+  supervisor        String?
+  hireDate          DateTime?
+  createdBy         String?
+  isOrganizationAdmin Boolean      @default(false)
+}
+
+model Organization {
+  id                String         @id @default(uuid())
+  name              String
+  type              OrganizationType
+  licenseNumber     String?
+  address           String?
+  contactEmail      String?
+  contactPhone      String?
+  website           String?
+  description       String?
+  status            OrgStatus      @default(ACTIVE)
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  parentId          String?
+  parent            Organization?  @relation("OrganizationHierarchy", fields: [parentId], references: [id])
+  children          Organization[] @relation("OrganizationHierarchy")
+  users             User[]
 }
 
 model Subscription {
@@ -71,6 +102,32 @@ enum UserRole {
   USER
   INVESTOR
   ADMIN
+  BROKER
+  TRADER
+  HR
+  ACCOUNTING
+  KELSOKO_ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum OrganizationType {
+  KELSOKO
+  BANK
+  BROKER
+  FUND
+  SPECULATOR
+  OTHER
+}
+
+enum OrgStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
 }
 
 enum SubscriptionStatus {

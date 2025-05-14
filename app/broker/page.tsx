@@ -25,13 +25,16 @@ import {
 } from '@/components/broker'
 import { AdsManagement } from '@/components/broker/ads/AdsManagement'
 import { ResearchBackoffice } from '@/components/research/ResearchBackoffice'
+import { OrganizationManagement } from '@/components/broker/organizations/OrganizationManagement'
 import RequireAuth from '@/components/auth/RequireAuth'
 import { useAuth } from '@/lib/auth/auth-context'
 
 export default function BrokerBackOffice() {
-  const { checkAccess } = useAuth()
+  const { checkAccess, user } = useAuth()
   const [showNewChallenge, setShowNewChallenge] = useState(false)
   const [activeHRTab, setActiveHRTab] = useState('staff')
+
+  const isKelsokoAdmin = user?.role === 'kelsoko_admin'
 
   return (
     <RequireAuth requiredRole="broker">
@@ -41,6 +44,9 @@ export default function BrokerBackOffice() {
         <Tabs defaultValue="dashboard" className="space-y-4">
           <TabsList>
             <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+            {isKelsokoAdmin && (
+              <TabsTrigger value="organizations">Organizations</TabsTrigger>
+            )}
             <TabsTrigger value="clients">Client Management</TabsTrigger>
             <TabsTrigger value="stocks">Stocks</TabsTrigger>
             <TabsTrigger value="challenges">Challenges</TabsTrigger>
@@ -65,6 +71,12 @@ export default function BrokerBackOffice() {
           <TabsContent value="dashboard">
             <BrokerDashboard />
           </TabsContent>
+
+          {isKelsokoAdmin && (
+            <TabsContent value="organizations">
+              <OrganizationManagement />
+            </TabsContent>
+          )}
 
           <TabsContent value="clients">
             <ClientManagement />

@@ -587,42 +587,17 @@ const VideoStatusCard = ({ status, onClose }: { status: VideoStatus; onClose?: (
   const [liveViewerCount, setLiveViewerCount] = useState(status.liveViewers);
 
   useEffect(() => {
-    // If this is a live stream with a mediaStream, attach it to the video element
-    if (status.isLive && status.streamData?.mediaStream && videoRef.current) {
-      videoRef.current.srcObject = status.streamData.mediaStream;
-      videoRef.current.play().catch(err => console.error('Error playing video:', err));
-      setIsPlaying(true);
-      
-      // Simulate increasing viewer count
-      const viewerInterval = setInterval(() => {
-        setLiveViewerCount(prev => {
-          const newCount = prev + Math.floor(Math.random() * 3);
-          return newCount;
-        });
-      }, 5000);
-      
-      return () => clearInterval(viewerInterval);
-    } else {
-      // For regular video status
-      if (status.videoUrl) {
-        try {
-          // If the URL is a data URL or starts with http/https, use it directly
-          if (typeof status.videoUrl === 'string' && (status.videoUrl.startsWith('data:') || status.videoUrl.startsWith('http'))) {
-            videoSourceRef.current = status.videoUrl;
-          } else {
-            // Create a Blob URL for file URLs
-            const blob = new Blob([status.videoUrl], { type: 'video/mp4' });
-            videoSourceRef.current = URL.createObjectURL(blob);
-          }
-        } catch (error) {
-          console.error('Error loading video:', error);
-          videoSourceRef.current = '';
-        }
-      } else {
-        videoSourceRef.current = '';
+    if (status.videoUrl && videoRef.current) {
+      if (typeof status.videoUrl === 'string') {
+        videoSourceRef.current = status.videoUrl;
+      } else if (status.videoUrl instanceof Blob) {
+        videoSourceRef.current = URL.createObjectURL(status.videoUrl);
+      } else if (status.videoUrl instanceof MediaSource) {
+        const blob = new Blob([], { type: 'video/mp4' });
+        videoSourceRef.current = URL.createObjectURL(blob);
       }
     }
-  }, [status.isLive, status.streamData, status.videoUrl]);
+  }, [status.videoUrl]);
 
   const handleVideoClick = () => {
     if (videoRef.current) {
@@ -968,7 +943,7 @@ const VideoStatusCard = ({ status, onClose }: { status: VideoStatus; onClose?: (
   );
 };
 
-const TradePostCard = ({ post, onLike, onComment, onLikeComment, onAddReply }: { post: TradePost; onLike: () => void; onComment: (text: string) => void; onLikeComment: (commentId: string, isReply?: boolean, parentCommentId?: string) => void; onAddReply: (commentId: string, text: string) => void }) => {
+const TradePostCard = ({ post, onLike, onComment, onLikeComment, onAddReply, onShare, onCopyLink, onShareToTwitter }: { post: TradePost; onLike: () => void; onComment: (text: string) => void; onLikeComment: (commentId: string, isReply?: boolean, parentCommentId?: string) => void; onAddReply: (commentId: string, text: string) => void; onShare: () => void; onCopyLink: () => void; onShareToTwitter: (text: string) => void }) => {
   const [isCommenting, setIsCommenting] = useState(false);
   const [commentText, setCommentText] = useState('');
   const [showComments, setShowComments] = useState(false);
@@ -1098,7 +1073,9 @@ const TradePostCard = ({ post, onLike, onComment, onLikeComment, onAddReply }: {
               </button>
               <Dialog>
                 <DialogTrigger asChild>
-                  <button className="flex items-center space-x-2 text-gray-500 dark:text-gray-400 hover:text-blue-500 dark:hover:text-blue-400">
+                  <button 
+                    className="flex items-center space-x-2 text-gray-500 dark:text-gray-400 hover:text-blue-500 dark:hover:text-blue-400"
+                  >
                     <Share2 className="h-5 w-5" />
                     <span className="text-xs">{post.engagement.shares}</span>
                   </button>
@@ -1111,10 +1088,22 @@ const TradePostCard = ({ post, onLike, onComment, onLikeComment, onAddReply }: {
                     </DialogDescription>
                   </DialogHeader>
                   <div className="grid grid-cols-2 gap-4">
-                    <Button variant="outline" className="dark:border-gray-700 dark:text-gray-300">
+                    <Button 
+                      variant="outline" 
+                      className="dark:border-gray-700 dark:text-gray-300"
+                      onClick={() => {
+                        onCopyLink();
+                        onShare(); // Call onShare to increment the counter
+                      }}
+                    >
                       Copy Link
                     </Button>
-                    <Button>Share to Twitter</Button>
+                    <Button onClick={() => {
+                      onShareToTwitter(post.content.text);
+                      // onShare is called inside shareToTwitter function
+                    }}>
+                      Share to Twitter
+                    </Button>
                   </div>
                 </DialogContent>
               </Dialog>
@@ -1424,8 +1413,19 @@ const SocialFeed = () => {
       setVisibility('public');
       setAttachments([]); // Clear attachments after posting
       
+      // Show success toast
+      toast({
+        title: "Post created",
+        description: "Your post has been published successfully",
+      });
+      
     } catch (error) {
       console.error('Error creating post:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create post. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -1452,7 +1452,7 @@ const SocialFeed = () => {
               handle: '@you',
               avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=currentuser'
             },
-            videoUrl: URL.createObjectURL(file), // Fix: Assign a Blob to videoUrl
+            videoUrl: URL.createObjectURL(file) as string, // Cast to string since we know it's a string URL
             thumbnail: URL.createObjectURL(await createVideoThumbnail(file)),
             duration: await getVideoDuration(file),
             timestamp: new Date().toISOString(),
@@ -1611,6 +1611,13 @@ const SocialFeed = () => {
         return post;
       })
     );
+    
+    // Add toast notification for better user feedback
+    toast({
+      title: "Post liked",
+      description: "Your like has been recorded",
+      duration: 1500,
+    });
   };
 
   const handleAddComment = (postId: string, commentText: string) => {
@@ -1783,6 +1790,53 @@ const SocialFeed = () => {
     return postText.length;
   };
 
+  const handleSharePost = (postId: string) => {
+    setPosts(currentPosts => 
+      currentPosts.map(post => {
+        if (post.id === postId) {
+          return {
+            ...post,
+            engagement: {
+              ...post.engagement,
+              shares: post.engagement.shares + 1
+            }
+          };
+        }
+        return post;
+      })
+    );
+    
+    toast({
+      title: "Post shared",
+      description: "This post has been shared successfully",
+    });
+  };
+
+  const copyPostLink = (postId: string) => {
+    // In a real app, this would be a proper URL to the post
+    const postLink = `${window.location.origin}/post/${postId}`;
+    navigator.clipboard.writeText(postLink);
+    
+    toast({
+      title: "Link copied",
+      description: "Post link copied to clipboard",
+    });
+  };
+
+  const shareToTwitter = (postId: string, postText: string) => {
+    const post = posts.find(p => p.id === postId);
+    if (!post) return;
+    
+    const tweetText = encodeURIComponent(`${postText.substring(0, 100)}${postText.length > 100 ? '...' : ''}`);
+    const tweetUrl = encodeURIComponent(`${window.location.origin}/post/${postId}`);
+    const twitterShareUrl = `https://twitter.com/intent/tweet?text=${tweetText}&url=${tweetUrl}`;
+    
+    window.open(twitterShareUrl, '_blank');
+    
+    // Update the share count
+    handleSharePost(postId);
+  };
+
   return (
     <div className="relative min-h-screen">
       {/* Status Section */}
@@ -1823,7 +1877,7 @@ const SocialFeed = () => {
                 <div className="flex items-center justify-between text-white">
                   <div className="flex items-center gap-2">
                     <Avatar className="h-8 w-8">
-                      <AvatarImage src={status.user.avatar} />
+                      <AvatarImage src={status.user.avatar} alt={status.user.name} />
                       <AvatarFallback>{status.user.name[0]}</AvatarFallback>
                     </Avatar>
                     <span className="text-sm">{status.user.name}</span>
@@ -1882,6 +1936,9 @@ const SocialFeed = () => {
             onLikeComment={(commentId, isReply, parentCommentId) => 
               handleLikeComment(post.id, commentId, isReply, parentCommentId)}
             onAddReply={(commentId, text) => handleAddReply(post.id, commentId, text)}
+            onShare={() => handleSharePost(post.id)}
+            onCopyLink={() => copyPostLink(post.id)}
+            onShareToTwitter={(text) => shareToTwitter(post.id, text)}
           />
         ))}
 

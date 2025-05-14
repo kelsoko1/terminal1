@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { DSESettings } from '@/components/account/DSESettings'
 import { AccountSubscription } from '@/components/subscription/AccountSubscription'
 import { AccountAds } from '@/components/account/AccountAds'
+import { InvestorProfile } from '@/components/account/InvestorProfile'
 import { 
   MessageSquare, 
   Users, 
@@ -88,7 +89,7 @@ export default function AccountPage() {
   const [isTyping, setIsTyping] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const [activeSettingsTab, setActiveSettingsTab] = useState<'security' | 'preferences' | 'dse'>('security')
+  const [activeSettingsTab, setActiveSettingsTab] = useState<'security' | 'preferences' | 'dse' | 'investor'>('security')
   const [activeSubscriptionTab, setActiveSubscriptionTab] = useState<'subscription' | 'subscription2'>('subscription')
 
   // Sample user posts
@@ -1113,6 +1114,12 @@ export default function AccountPage() {
                 >
                   DSE Settings
                 </button>
+                <button 
+                  className={`px-6 py-3 font-medium text-center ${activeSettingsTab === 'investor' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:bg-gray-50'}`}
+                  onClick={() => setActiveSettingsTab('investor')}
+                >
+                  Investor Profile
+                </button>
               </div>
             </div>
             
@@ -1184,6 +1191,10 @@ export default function AccountPage() {
               
               {activeSettingsTab === 'dse' && (
                 <DSESettings />
+              )}
+              
+              {activeSettingsTab === 'investor' && (
+                <InvestorProfile />
               )}
             </div>
           </Card>

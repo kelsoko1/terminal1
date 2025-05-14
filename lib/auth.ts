@@ -19,8 +19,9 @@ export async function register(credentials: {
   password: string;
   contactNumber?: string;
   role?: UserRole;
+  metadata?: Record<string, any>;
 }) {
-  const { name, email, password, contactNumber, role = 'investor' } = credentials;
+  const { name, email, password, contactNumber, role = 'investor', metadata = {} } = credentials;
   
   // Validate email and password
   userSchema.parse({ email, password });
@@ -52,18 +53,20 @@ export async function register(credentials: {
         role, 
         contact_number, 
         status,
-        permissions
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, name, email, role`,
-      [name, email, hashedPassword, role, contactNumber || null, 'active', permissions]
+        permissions,
+        metadata
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id, name, email, role`,
+      [name, email, hashedPassword, role, contactNumber || null, 'active', permissions, metadata ? JSON.stringify(metadata) : null]
     );
 
     const userId = userResult.rows[0].id;
 
     // Create initial portfolio for investors
     if (role === 'investor') {
+      const initialInvestment = metadata?.initialInvestment ? parseFloat(metadata.initialInvestment) : 0;
       await client.query(
         'INSERT INTO portfolios (user_id, name, cash_balance) VALUES ($1, $2, $3)',
-        [userId, 'Default Portfolio', 0]
+        [userId, 'Default Portfolio', initialInvestment]
       );
     }
 

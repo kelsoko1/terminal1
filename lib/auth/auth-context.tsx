@@ -1,12 +1,14 @@
 'use client'
 
 import { createContext, useContext, useEffect, useState } from 'react'
-import { AuthState, User, UserRole } from './types'
+import { AuthState, User, UserRole, OrganizationType } from './types'
 
 interface AuthContextType extends AuthState {
   login: (email: string, password: string) => Promise<void>
   logout: () => Promise<void>
   checkAccess: (requiredRole: UserRole) => boolean
+  checkOrgAccess: (organizationId: string) => boolean
+  checkOrgAdminAccess: () => boolean
 }
 
 interface MockUser extends Omit<User, 'status'> {
@@ -18,6 +20,18 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 // Common permission sets
 const PERMISSIONS = {
+  KELSOKO_ADMIN: [
+    'all_access',
+    'system_config',
+    'user_management',
+    'organization_management',
+    'broker_management',
+    'trader_management',
+    'financial_reports',
+    'client_management',
+    'trading',
+    'market_analysis',
+  ],
   ADMIN: [
     'all_access',
     'system_config',
@@ -30,7 +44,6 @@ const PERMISSIONS = {
     'market_analysis',
   ],
   HR: [
-    'all_access',
     'user_management',
     'broker_management',
     'trader_management',
@@ -65,91 +78,65 @@ const PERMISSIONS = {
   ],
 }
 
+// Mock organizations data
+const MOCK_ORGANIZATIONS = [
+  {
+    id: 'ORG001',
+    name: 'Kelsoko',
+    type: 'kelsoko' as OrganizationType,
+    status: 'active' as 'active' | 'inactive' | 'suspended',
+    createdAt: '2023-01-01',
+    updatedAt: '2023-01-01',
+  },
+  {
+    id: 'ORG002',
+    name: 'Global Bank',
+    type: 'bank' as OrganizationType,
+    parentId: 'ORG001',
+    licenseNumber: 'BNK-2025-001',
+    status: 'active' as 'active' | 'inactive' | 'suspended',
+    createdAt: '2023-02-01',
+    updatedAt: '2023-02-01',
+  },
+  {
+    id: 'ORG003',
+    name: 'Capital Brokers',
+    type: 'broker' as OrganizationType,
+    parentId: 'ORG001',
+    licenseNumber: 'BRK-2025-001',
+    status: 'active' as 'active' | 'inactive' | 'suspended',
+    createdAt: '2023-03-01',
+    updatedAt: '2023-03-01',
+  },
+  {
+    id: 'ORG004',
+    name: 'Hedge Fund Partners',
+    type: 'fund' as OrganizationType,
+    parentId: 'ORG001',
+    licenseNumber: 'FND-2025-001',
+    status: 'active' as 'active' | 'inactive' | 'suspended',
+    createdAt: '2023-04-01',
+    updatedAt: '2023-04-01',
+  },
+]
+
 // Mock user data - Replace with actual API calls in production
 const MOCK_USERS: MockUser[] = [
   {
-    id: 'ADM001',
-    name: 'Admin User',
-    email: 'admin@example.com',
-    password: 'admin123',
-    role: 'admin' as UserRole,
-    department: 'management',
+    id: 'KELSOKO001',
+    name: 'Elvina Senga',
+    email: 'elvinasenga@gmail.com',
+    password: 'KelgloKargav1',
+    role: 'kelsoko_admin' as UserRole,
+    department: 'executive',
     status: 'active',
-    permissions: PERMISSIONS.ADMIN,
+    permissions: PERMISSIONS.KELSOKO_ADMIN,
     hireDate: '2023-01-01',
-    employeeId: 'EMP001',
-    contactNumber: '+1-555-0001',
-  },
-  {
-    id: 'HR001',
-    name: 'HR Manager',
-    email: 'hr@example.com',
-    password: 'hr123',
-    role: 'hr' as UserRole,
-    department: 'human_resources',
-    status: 'active',
-    permissions: PERMISSIONS.HR,
-    hireDate: '2023-02-01',
-    employeeId: 'EMP002',
-    contactNumber: '+1-555-0002',
-  },
-  {
-    id: 'ACC001',
-    name: 'Account Manager',
-    email: 'accounting@example.com',
-    password: 'accounting123',
-    role: 'accounting' as UserRole,
-    department: 'finance',
-    status: 'active',
-    permissions: PERMISSIONS.ACCOUNTING,
-    hireDate: '2023-03-01',
-    employeeId: 'EMP003',
-    contactNumber: '+1-555-0003',
-  },
-  {
-    id: 'BRK001',
-    name: 'John Broker',
-    email: 'broker@example.com',
-    password: 'broker123',
-    role: 'broker' as UserRole,
-    licenseNumber: 'BRK-2025-001',
-    department: 'equities',
-    tradingLimit: 1000000,
-    supervisor: 'HR Manager',
-    hireDate: '2024-01-15',
-    status: 'active',
-    permissions: PERMISSIONS.BROKER,
-    employeeId: 'EMP004',
-    contactNumber: '+1-555-0004',
-  },
-  {
-    id: 'TRD001',
-    name: 'Tom Trader',
-    email: 'trader@example.com',
-    password: 'trader123',
-    role: 'trader' as UserRole,
-    licenseNumber: 'TRD-2025-001',
-    department: 'trading',
-    tradingLimit: 500000,
-    supervisor: 'John Broker',
-    hireDate: '2024-02-01',
-    status: 'active',
-    permissions: PERMISSIONS.TRADER,
-    employeeId: 'EMP005',
-    contactNumber: '+1-555-0005',
-  },
-  {
-    id: 'INV001',
-    name: 'Jane Investor',
-    email: 'investor@example.com',
-    password: 'investor123',
-    role: 'investor' as UserRole,
-    status: 'active',
-    permissions: PERMISSIONS.INVESTOR,
-    accountNumber: 'ACC001',
-    joinDate: '2024-03-01',
-    contactNumber: '+1-555-0006',
-  },
+    employeeId: 'EMP000',
+    contactNumber: '+1-555-0000',
+    organizationId: 'ORG001',
+    isOrganizationAdmin: true,
+  }
 ]
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -157,6 +144,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     user: null,
     isAuthenticated: false,
     isLoading: true,
+    organization: null,
   })
 
   useEffect(() => {
@@ -164,8 +152,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const checkAuth = async () => {
       const storedUser = localStorage.getItem('user')
       if (storedUser) {
+        const user = JSON.parse(storedUser)
+        const organization = user.organizationId 
+          ? MOCK_ORGANIZATIONS.find(org => org.id === user.organizationId) || null
+          : null
+        
         setState({
-          user: JSON.parse(storedUser),
+          user,
+          organization,
           isAuthenticated: true,
           isLoading: false,
         })
@@ -190,9 +184,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       status: userWithoutPassword.status || 'active' // Ensure status is set
     }
 
+    // Get organization if applicable
+    const organization = user.organizationId 
+      ? MOCK_ORGANIZATIONS.find(org => org.id === user.organizationId) || null
+      : null
+
     localStorage.setItem('user', JSON.stringify(user))
     setState({
       user,
+      organization,
       isAuthenticated: true,
       isLoading: false,
     })
@@ -202,6 +202,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.removeItem('user')
     setState({
       user: null,
+      organization: null,
       isAuthenticated: false,
       isLoading: false,
     })
@@ -209,22 +210,55 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const checkAccess = (requiredRole: UserRole): boolean => {
     if (!state.user) return false
-    
-    // Updated role hierarchy to give HR admin-like access
-    const roleHierarchy: Record<UserRole, UserRole[]> = {
-      admin: ['admin', 'hr', 'accounting', 'broker', 'trader', 'investor'],
-      hr: ['hr', 'admin', 'accounting', 'broker', 'trader', 'investor'], // HR now has admin-like access
-      accounting: ['accounting', 'broker'],
-      broker: ['broker', 'trader', 'investor'],
-      trader: ['trader', 'investor'],
-      investor: ['investor']
+
+    // Kelsoko admin has access to everything
+    if (state.user.role === 'kelsoko_admin') return true
+
+    // Organization admins have access to their organization's roles
+    if (state.user.isOrganizationAdmin && requiredRole !== 'kelsoko_admin') return true
+
+    // Check specific role access
+    if (requiredRole === 'admin') {
+      return state.user.role === 'admin'
     }
 
-    return roleHierarchy[state.user.role]?.includes(requiredRole) || false
+    // HR can manage users within their organization
+    if (requiredRole === 'hr') {
+      return state.user.role === 'hr' || state.user.role === 'admin'
+    }
+
+    // Other role checks
+    if (requiredRole === state.user.role) return true
+
+    return false
+  }
+
+  const checkOrgAccess = (organizationId: string): boolean => {
+    if (!state.user) return false
+    
+    // Kelsoko admin has access to all organizations
+    if (state.user.role === 'kelsoko_admin') return true
+    
+    // Users can only access their own organization
+    return state.user.organizationId === organizationId
+  }
+
+  const checkOrgAdminAccess = (): boolean => {
+    if (!state.user) return false
+    return !!state.user.isOrganizationAdmin
   }
 
   return (
-    <AuthContext.Provider value={{ ...state, login, logout, checkAccess }}>
+    <AuthContext.Provider
+      value={{
+        ...state,
+        login,
+        logout,
+        checkAccess,
+        checkOrgAccess,
+        checkOrgAdminAccess,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   )
