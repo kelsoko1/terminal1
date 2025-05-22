@@ -1,11 +1,16 @@
 {
+<<<<<<< HEAD
   "name": "terminal",
+=======
+  "name": "Terminal",
+>>>>>>> 842da9803 (first upload)
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+<<<<<<< HEAD
     "lint": "next lint",
     "pm2:start": "pm2 start ecosystem.config.js",
     "pm2:stop": "pm2 stop ecosystem.config.js",
@@ -13,13 +18,21 @@
     "pm2:delete": "pm2 delete ecosystem.config.js",
     "pm2:logs": "pm2 logs",
     "pm2:monit": "pm2 monit"
+=======
+    "lint": "next lint"
+>>>>>>> 842da9803 (first upload)
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",
     "@next/swc-wasm-nodejs": "13.5.1",
+<<<<<<< HEAD
     "@nozbe/watermelondb": "^0.25.5",
     "@nozbe/with-observables": "^1.6.0",
     "@prisma/client": "^5.10.0",
+=======
+    "@nozbe/watermelondb": "^0.27.1",
+    "@nozbe/with-observables": "^1.6.0",
+>>>>>>> 842da9803 (first upload)
     "@radix-ui/react-accordion": "^1.2.0",
     "@radix-ui/react-alert-dialog": "^1.1.1",
     "@radix-ui/react-aspect-ratio": "^1.1.0",
@@ -52,7 +65,10 @@
     "@react-navigation/material-top-tabs": "^7.2.1",
     "@react-navigation/native": "^7.0.17",
     "@types/node": "20.6.2",
+<<<<<<< HEAD
     "@types/pg": "^8.11.2",
+=======
+>>>>>>> 842da9803 (first upload)
     "@types/react": "18.2.22",
     "@types/react-dom": "18.2.7",
     "@types/uuid": "^10.0.0",
@@ -64,6 +80,7 @@
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
     "cmdk": "^1.0.0",
+<<<<<<< HEAD
     "compression": "^1.7.4",
     "date-fns": "^3.6.0",
     "dotenv": "^16.4.5",
@@ -74,13 +91,25 @@
     "expo-linear-gradient": "^14.0.2",
     "input-otp": "^1.2.4",
     "ioredis": "^5.3.2",
+=======
+    "date-fns": "^3.6.0",
+    "embla-carousel-react": "^8.3.0",
+    "eslint": "8.49.0",
+    "eslint-config-next": "^14.1.3",
+    "expo-linear-gradient": "^14.0.2",
+    "input-otp": "^1.2.4",
+>>>>>>> 842da9803 (first upload)
     "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.446.0",
     "lucide-react-native": "^0.477.0",
     "next": "^14.1.3",
+<<<<<<< HEAD
     "next-auth": "^4.24.5",
     "next-themes": "^0.3.0",
     "pg": "^8.11.3",
+=======
+    "next-themes": "^0.3.0",
+>>>>>>> 842da9803 (first upload)
     "postcss": "^8.5.3",
     "react": "18.2.0",
     "react-day-picker": "^8.10.1",
@@ -101,13 +130,25 @@
     "uuid": "^11.1.0",
     "vaul": "^0.9.9",
     "zod": "^3.23.8",
+<<<<<<< HEAD
     "zustand": "^4.5.2"
+=======
+    "zustand": "^4.5.2",
+    "pg": "^8.11.3",
+    "ioredis": "^5.3.2",
+    "@types/pg": "^8.11.2",
+    "dotenv": "^16.4.5"
+>>>>>>> 842da9803 (first upload)
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
     "@types/jsonwebtoken": "^9.0.7",
     "@types/react-native-vector-icons": "^6.4.18",
+<<<<<<< HEAD
     "babel-plugin-module-resolver": "^5.0.2",
     "prisma": "^5.10.0"
+=======
+    "babel-plugin-module-resolver": "^5.0.2"
+>>>>>>> 842da9803 (first upload)
   }
 }
