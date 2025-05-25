@@ -39,10 +39,8 @@ export default function BrokerBackOffice() {
   return (
     <RequireAuth requiredRole="broker">
       <div className="container py-6">
-        <h1 className="text-3xl font-bold mb-6">Broker Back Office</h1>
-        
         <Tabs defaultValue="dashboard" className="space-y-4">
-          <TabsList>
+          <TabsList className="flex w-full overflow-x-auto pb-2">
             <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
             {isKelsokoAdmin && (
               <TabsTrigger value="organizations">Organizations</TabsTrigger>

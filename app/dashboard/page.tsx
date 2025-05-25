@@ -13,19 +13,10 @@ export default function DashboardPage() {
 
   return (
     <RequireAuth>
-      <div className="container py-6">
-        {/* Back Office Access Button for Brokers */}
-        {checkAccess('broker') && (
-          <div className="mb-6">
-            <Link href="/broker">
-              <Button>Access Back Office</Button>
-            </Link>
-          </div>
-        )}
-
+      <div className="w-full py-6">
         <div className="grid gap-6">
           {/* TikTok Style Feed - Main Content */}
-          <div className="w-full max-w-4xl mx-auto">
+          <div className="w-full">
             <TikTokStyleFeed />
           </div>
         </div>

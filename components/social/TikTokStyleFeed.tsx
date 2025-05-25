@@ -1,41 +1,46 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import './TikTokStyleFeed.css'
 import { Card } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+// Tabs removed
 import { Textarea } from '@/components/ui/textarea'
 import { useToast } from '@/components/ui/use-toast'
-import { AudioLiveStream } from './audio/AudioLiveStream'
-import { MediaStreamStatus } from './MediaStreamStatus'
+import { v4 as uuidv4 } from 'uuid'
+// Streaming functionality
+import { useMediaStream } from '@/hooks/useMediaStream'
 import {
-  Mic,
-  Video,
   Heart,
   MessageSquare,
   Share2,
   MoreHorizontal,
   Users,
-  Radio,
   Clock,
-  Play,
-  Pause,
-  Volume2,
-  VolumeX,
   ChevronUp,
   ChevronDown,
-  Send,
   Image as ImageIcon,
-  Camera,
   Bookmark,
   Repeat,
   Activity,
-  X,
+  PenSquare,
+  Link,
   AlertCircle,
   Loader2,
+  Search,
+  RefreshCw,
+  Star,
+  ArrowUp,
+  ArrowDown,
+  Trash,
+  Video,
+  Mic,
+  MicOff,
+  VideoOff,
+  StopCircle
 } from 'lucide-react'
 import {
   DropdownMenu,
@@ -52,9 +57,19 @@ import {
   DialogFooter,
   DialogTrigger,
 } from '@/components/ui/dialog'
-import { useMediaStream } from '@/hooks/use-media-stream'
+// Streaming functionality removed
 
 // Types
+interface Comment {
+  id: string
+  userId: string
+  userName: string
+  userAvatar: string
+  content: string
+  timestamp: string
+  likes: number
+}
+
 interface StatusUpdate {
   id: string
   userId: string
@@ -66,21 +81,26 @@ interface StatusUpdate {
   comments: number
   shares: number
   hasLiked?: boolean
+  hasDisliked?: boolean
+  voteStatus?: 'upvoted' | 'downvoted' | 'none'
   mediaType?: 'image' | 'video' | 'audio' | 'none'
   mediaUrl?: string
+  commentsList?: Comment[]
 }
 
+// LiveStream interface
 interface LiveStream {
-  id: string
-  userId: string
-  userName: string
-  userAvatar: string
-  title: string
-  description: string
-  viewers: number
-  duration: number
-  isLive: boolean
-  type: 'audio' | 'video'
+  id: string;
+  userId: string;
+  userName: string;
+  userAvatar: string;
+  title: string;
+  viewers: number;
+  isLive: boolean;
+  startTime: string;
+  mediaType: 'video' | 'audio';
+  mediaUrl?: string; // URL to the recorded stream for ended streams
+  duration?: number; // Duration in seconds for ended streams
 }
 
 // Format duration as HH:MM:SS
@@ -104,10 +124,9 @@ const formatRelativeTime = (timestamp: string) => {
 }
 
 // API functions for production
-const fetchStatusUpdates = async (page: number = 1, limit: number = 10): Promise<StatusUpdate[]> => {
+async function fetchStatusUpdates(page: number = 1, limit: number = 10): Promise<StatusUpdate[]> {
   try {
-    // In production, this would be a real API call
-    const response = await fetch(`/api/status?page=${page}&limit=${limit}`);
+    const response = await fetch(`/api/social/status?page=${page}&limit=${limit}`);
     if (!response.ok) {
       throw new Error('Failed to fetch status updates');
     }
@@ -118,24 +137,9 @@ const fetchStatusUpdates = async (page: number = 1, limit: number = 10): Promise
   }
 };
 
-const fetchLiveStreams = async (): Promise<LiveStream[]> => {
-  try {
-    // In production, this would be a real API call
-    const response = await fetch('/api/livestreams');
-    if (!response.ok) {
-      throw new Error('Failed to fetch live streams');
-    }
-    return await response.json();
-  } catch (error) {
-    console.error('Error fetching live streams:', error);
-    return [];
-  }
-};
-
 const likeStatus = async (statusId: string, liked: boolean): Promise<boolean> => {
   try {
-    // In production, this would be a real API call
-    const response = await fetch(`/api/status/${statusId}/like`, {
+    const response = await fetch(`/api/social/status/${statusId}/like`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -154,8 +158,7 @@ const likeStatus = async (statusId: string, liked: boolean): Promise<boolean> =>
 
 const commentOnStatus = async (statusId: string, comment: string): Promise<boolean> => {
   try {
-    // In production, this would be a real API call
-    const response = await fetch(`/api/status/${statusId}/comment`, {
+    const response = await fetch(`/api/social/status/${statusId}/comment`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -174,8 +177,7 @@ const commentOnStatus = async (statusId: string, comment: string): Promise<boole
 
 const shareStatus = async (statusId: string): Promise<boolean> => {
   try {
-    // In production, this would be a real API call
-    const response = await fetch(`/api/status/${statusId}/share`, {
+    const response = await fetch(`/api/social/status/${statusId}/share`, {
       method: 'POST',
     });
     if (!response.ok) {
@@ -188,64 +190,339 @@ const shareStatus = async (statusId: string): Promise<boolean> => {
   }
 };
 
-const createStatus = async (content: string, mediaType?: string, mediaUrl?: string): Promise<StatusUpdate | null> => {
+// Post creation functionality
+async function createPost(content: string, attachments: any[] = []): Promise<StatusUpdate | null> {
   try {
-    // In production, this would be a real API call
-    const response = await fetch('/api/status', {
+    const response = await fetch('/api/social/posts', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}` // Assuming token is stored in localStorage
       },
-      body: JSON.stringify({ content, mediaType, mediaUrl }),
+      body: JSON.stringify({ content, attachments })
     });
+    
     if (!response.ok) {
-      throw new Error('Failed to create status');
+      throw new Error('Failed to create post');
     }
-    return await response.json();
+    
+    const data = await response.json();
+    return {
+      id: data.post.id,
+      userId: data.post.userId,
+      userName: data.post.user.name,
+      userAvatar: '/placeholder-avatar.jpg', // Placeholder avatar
+      content: data.post.content,
+      timestamp: data.post.createdAt,
+      likes: 0,
+      comments: 0,
+      shares: 0,
+      hasLiked: false,
+      mediaType: attachments.length > 0 ? 'image' : 'none',
+      mediaUrl: attachments.length > 0 ? attachments[0].url : undefined
+    };
   } catch (error) {
-    console.error('Error creating status:', error);
+    console.error('Error creating post:', error);
     return null;
   }
-};
+}
+
+// Vote API functions
+async function voteOnPost(postId: string, voteType: 'upvote' | 'downvote' | 'none'): Promise<boolean> {
+  try {
+    // In a real app, this would call an API endpoint
+    // For now, we'll just simulate a successful API call
+    console.log(`Voting ${voteType} on post ${postId}`);
+    return true;
+  } catch (error) {
+    console.error('Error voting on post:', error);
+    return false;
+  }
+}
+
+// Fetch comments for a post
+async function fetchComments(postId: string): Promise<Comment[]> {
+  try {
+    // In a real app, this would call an API endpoint
+    // For now, we'll return mock data
+    return [
+      {
+        id: `comment-1-${postId}`,
+        userId: 'user-123',
+        userName: 'User123',
+        userAvatar: '/placeholder-avatar.jpg',
+        content: 'This is a great post! Thanks for sharing.',
+        timestamp: new Date(Date.now() - 7200000).toISOString(), // 2 hours ago
+        likes: 5
+      },
+      {
+        id: `comment-2-${postId}`,
+        userId: 'user-456',
+        userName: 'AnotherUser',
+        userAvatar: '/placeholder-avatar.jpg',
+        content: 'I have a question about this. Can you elaborate more?',
+        timestamp: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
+        likes: 2
+      },
+      {
+        id: `comment-3-${postId}`,
+        userId: 'user-789',
+        userName: 'ThirdUser',
+        userAvatar: '/placeholder-avatar.jpg',
+        content: 'I disagree with some points, but overall it\'s a good perspective.',
+        timestamp: new Date(Date.now() - 172800000).toISOString(), // 2 days ago
+        likes: 1
+      }
+    ];
+  } catch (error) {
+    console.error('Error fetching comments:', error);
+    return [];
+  }
+}
 
 export function TikTokStyleFeed() {
-  const [activeTab, setActiveTab] = useState('feeds')
+  // Removed tabs functionality
   const [statusUpdates, setStatusUpdates] = useState<StatusUpdate[]>([])
-  const [liveStreams, setLiveStreams] = useState<LiveStream[]>([])
-  const [newStatusText, setNewStatusText] = useState('')
-  const [showPostDialog, setShowPostDialog] = useState(false)
-  const [showAudioStream, setShowAudioStream] = useState(false)
-  const [showVideoStream, setShowVideoStream] = useState(false)
-  const [selectedLiveStream, setSelectedLiveStream] = useState<LiveStream | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [hasMore, setHasMore] = useState(true)
-  const [showStreamingDialog, setShowStreamingDialog] = useState(false)
   const [page, setPage] = useState(1)
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [mediaUpload, setMediaUpload] = useState<File | null>(null)
-  const [mediaType, setMediaType] = useState<'image' | 'video' | 'audio' | 'none'>('none')
-  const [mediaPreview, setMediaPreview] = useState<string | null>(null)
   const [isBookmarked, setIsBookmarked] = useState<Record<string, boolean>>({})
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [postContent, setPostContent] = useState('')
+  const [isCreatingPost, setIsCreatingPost] = useState(false)
+  const [showPostDialog, setShowPostDialog] = useState(false)
+  const [voteStatus, setVoteStatus] = useState<Record<string, 'upvoted' | 'downvoted' | 'none'>>({}) 
+  const [activePostId, setActivePostId] = useState<string | null>(null)
+  const [commentText, setCommentText] = useState('')
+  const [isLoadingComments, setIsLoadingComments] = useState(false)
+  
+  // Media streaming states
+  const [streamType, setStreamType] = useState<'video' | 'audio' | null>(null)
+  const [streamTitle, setStreamTitle] = useState('')
+  const [liveStreams, setLiveStreams] = useState<LiveStream[]>([])
+  const [activeStream, setActiveStream] = useState<LiveStream | null>(null)
+  const [showStreamPreview, setShowStreamPreview] = useState(false)
+  const [selectedStream, setSelectedStream] = useState<LiveStream | null>(null)
+  const [showStreamDialog, setShowStreamDialog] = useState(false)
+  
+  // Use the media stream hook
+  const {
+    stream,
+    error: streamError,
+    isLoading: isStreamLoading,
+    startStream,
+    stopStream,
+    videoRef,
+    audioRef,
+    isStreamActive
+  } = useMediaStream()
+  
   const { toast } = useToast()
-  const videoRef = useRef<HTMLVideoElement>(null)
-  const { getMediaStream, stopMediaStream } = useMediaStream()
-  const [streamError, setStreamError] = useState<string | null>(null)
-  const [isStreamActive, setIsStreamActive] = useState(false)
+  
+  // Handle starting a stream
+  const handleStartStream = async (type: 'video' | 'audio') => {
+    try {
+      setStreamType(type);
+      setShowStreamPreview(true);
+      
+      if (type === 'video') {
+        await startStream({ video: true, audio: true });
+      } else {
+        await startStream({ video: false, audio: true });
+      }
+      
+      // Create a new stream object for the left column
+      const newStream: LiveStream = {
+        id: uuidv4(),
+        userId: 'current-user-id',
+        userName: 'Current User',
+        userAvatar: '/placeholder-avatar.jpg',
+        title: streamTitle || `${type === 'video' ? 'Video' : 'Audio'} Stream`,
+        viewers: 0,
+        isLive: true,
+        startTime: new Date().toISOString(),
+        mediaType: type
+      };
+      
+      setActiveStream(newStream);
+      setLiveStreams(prev => [newStream, ...prev]);
+      
+      toast({
+        title: 'Stream Started',
+        description: `Your ${type} stream has started successfully`,
+      });
+    } catch (error) {
+      console.error('Error starting stream:', error);
+      toast({
+        title: 'Error',
+        description: streamError || `Failed to start ${type} stream. Please check your permissions.`,
+        variant: 'destructive',
+      });
+    }
+  };
+  
+  // Handle stopping a stream
+  const handleStopStream = () => {
+    stopStream();
+    setStreamType(null);
+    setShowStreamPreview(false);
+    
+    // Update the active stream status
+    if (activeStream) {
+      // In a real app, you would save the stream recording to a file/blob
+      // and upload it to a storage service, then use the URL
+      const mediaUrl = activeStream.mediaType === 'video' 
+        ? '/placeholder-video.mp4' 
+        : '/placeholder-audio.mp3';
+      
+      // Calculate duration - in a real app this would be the actual duration
+      const startTime = new Date(activeStream.startTime).getTime();
+      const endTime = new Date().getTime();
+      const durationInSeconds = Math.floor((endTime - startTime) / 1000);
+      
+      const updatedStream = { 
+        ...activeStream, 
+        isLive: false,
+        mediaUrl,
+        duration: durationInSeconds
+      };
+      setActiveStream(null);
+      
+      // Update the stream in the list
+      setLiveStreams(prev => 
+        prev.map(stream => 
+          stream.id === updatedStream.id ? updatedStream : stream
+        )
+      );
+    }
+    
+    toast({
+      title: 'Stream Ended',
+      description: 'Your stream has ended',
+    });
+  };
+  
+  // Handle post creation with optional media stream
+  const handleCreatePost = async () => {
+    if (!postContent.trim() && !isStreamActive) {
+      toast({
+        title: 'Error',
+        description: 'Post content or active stream is required',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    setIsCreatingPost(true);
+    
+    try {
+      // Determine media type for the post
+      let mediaType: 'image' | 'video' | 'audio' | 'none' = 'none';
+      let mediaUrl = '';
+      
+      if (isStreamActive && stream) {
+        // In a real app, you would save the stream recording to a file/blob
+        // and upload it to a storage service, then use the URL
+        mediaType = streamType === 'video' ? 'video' : 'audio';
+        mediaUrl = '/placeholder-media.mp4'; // Placeholder for demo
+        
+        // Stop the stream after posting
+        handleStopStream();
+      }
+      
+      // For demo purposes, create a local post if API call fails
+      const newPost = await createPost(postContent) || {
+        id: uuidv4(),
+        userId: 'current-user-id',
+        userName: 'Current User',
+        userAvatar: '/placeholder-avatar.jpg',
+        content: postContent,
+        timestamp: new Date().toISOString(),
+        likes: 0,
+        comments: 0,
+        shares: 0,
+        hasLiked: false,
+        mediaType,
+        mediaUrl
+      };
+      
+      setStatusUpdates(prev => [newPost, ...prev]);
+      setPostContent('');
+      setShowPostDialog(false);
+      
+      toast({
+        title: 'Success',
+        description: 'Your post has been created successfully',
+      });
+    } catch (error) {
+      console.error('Error creating post:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to create post. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsCreatingPost(false);
+    }
+  };
   
   // Ref for infinite scroll
   const observerRef = useRef<IntersectionObserver | null>(null)
   const lastElementRef = useRef<HTMLDivElement | null>(null)
   
+  // Initialize with some mock streams for demo purposes
+  useEffect(() => {
+    // Only add mock data if there are no streams yet
+    if (liveStreams.length === 0) {
+      const mockStreams: LiveStream[] = [
+        {
+          id: uuidv4(),
+          userId: 'user-1',
+          userName: 'John Doe',
+          userAvatar: '/placeholder-avatar.jpg',
+          title: 'Market Analysis Live',
+          viewers: 124,
+          isLive: true,
+          startTime: new Date(Date.now() - 15 * 60 * 1000).toISOString(), // Started 15 mins ago
+          mediaType: 'video'
+        },
+        {
+          id: uuidv4(),
+          userId: 'user-2',
+          userName: 'Jane Smith',
+          userAvatar: '/placeholder-avatar.jpg',
+          title: 'Financial Tips',
+          viewers: 0,
+          isLive: false,
+          startTime: new Date(Date.now() - 120 * 60 * 1000).toISOString(), // Started 2 hours ago
+          mediaType: 'audio',
+          mediaUrl: '/placeholder-audio.mp3',
+          duration: 1845 // 30:45
+        },
+        {
+          id: uuidv4(),
+          userId: 'user-3',
+          userName: 'Robert Johnson',
+          userAvatar: '/placeholder-avatar.jpg',
+          title: 'Stock Market Review',
+          viewers: 0,
+          isLive: false,
+          startTime: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), // Started 1 day ago
+          mediaType: 'video',
+          mediaUrl: '/placeholder-video.mp4',
+          duration: 3600 // 1:00:00
+        }
+      ];
+      
+      setLiveStreams(mockStreams);
+    }
+  }, []);
+  
   // Auto-update timer
   useEffect(() => {
-    // In a production app, this would be replaced with WebSockets or server-sent events
     const updateInterval = setInterval(async () => {
       try {
-        // Check for new content
         const latestUpdates = await fetchStatusUpdates(1, 3);
         
-        // Check if there are any new updates not in our current list
         const newUpdates = latestUpdates.filter(
           update => !statusUpdates.some(existing => existing.id === update.id)
         );
@@ -324,7 +601,6 @@ export function TikTokStyleFeed() {
     
     const newLikedState = !status.hasLiked;
     
-    // Optimistic update
     setStatusUpdates(prev => prev.map(s => {
       if (s.id === statusId) {
         return {
@@ -341,7 +617,6 @@ export function TikTokStyleFeed() {
     } catch (error) {
       console.error('Error liking status:', error);
       
-      // Revert on error
       setStatusUpdates(prev => prev.map(s => {
         if (s.id === statusId) {
           return {
@@ -378,20 +653,76 @@ export function TikTokStyleFeed() {
     });
   };
   
+  // Handle post click to view comments
+  const handlePostClick = async (statusId: string) => {
+    // If already viewing this post, close it
+    if (activePostId === statusId) {
+      setActivePostId(null);
+      return;
+    }
+    
+    setActivePostId(statusId);
+    setIsLoadingComments(true);
+    
+    try {
+      // Check if we already have comments for this post
+      const post = statusUpdates.find(s => s.id === statusId);
+      if (post && !post.commentsList) {
+        // Fetch comments if we don't have them yet
+        const comments = await fetchComments(statusId);
+        
+        // Update the post with comments
+        setStatusUpdates(prev => prev.map(s => {
+          if (s.id === statusId) {
+            return {
+              ...s,
+              commentsList: comments
+            };
+          }
+          return s;
+        }));
+      }
+    } catch (error) {
+      console.error('Error fetching comments:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to load comments. Please try again.',
+      });
+    } finally {
+      setIsLoadingComments(false);
+    }
+  };
+  
   // Handle comment on status
   const handleComment = async (statusId: string, comment: string) => {
     if (!comment.trim()) return;
     
-    // Optimistic update
+    // Create a new comment object
+    const newComment: Comment = {
+      id: `comment-new-${Date.now()}`,
+      userId: 'current-user-id',
+      userName: 'Current User',
+      userAvatar: '/placeholder-avatar.jpg',
+      content: comment,
+      timestamp: new Date().toISOString(),
+      likes: 0
+    };
+    
+    // Update UI immediately
     setStatusUpdates(prev => prev.map(s => {
       if (s.id === statusId) {
         return {
           ...s,
-          comments: s.comments + 1
+          comments: s.comments + 1,
+          commentsList: s.commentsList ? [newComment, ...s.commentsList] : [newComment]
         };
       }
       return s;
     }));
+    
+    // Clear comment text
+    setCommentText('');
     
     try {
       await commentOnStatus(statusId, comment);
@@ -403,12 +734,13 @@ export function TikTokStyleFeed() {
     } catch (error) {
       console.error('Error commenting on status:', error);
       
-      // Revert on error
+      // Revert UI changes if API call fails
       setStatusUpdates(prev => prev.map(s => {
         if (s.id === statusId) {
           return {
             ...s,
-            comments: s.comments - 1
+            comments: s.comments - 1,
+            commentsList: s.commentsList?.filter(c => c.id !== newComment.id)
           };
         }
         return s;
@@ -424,7 +756,6 @@ export function TikTokStyleFeed() {
   
   // Handle share status
   const handleShare = async (statusId: string) => {
-    // Optimistic update
     setStatusUpdates(prev => prev.map(s => {
       if (s.id === statusId) {
         return {
@@ -440,7 +771,6 @@ export function TikTokStyleFeed() {
     } catch (error) {
       console.error('Error sharing status:', error);
       
-      // Revert on error
       setStatusUpdates(prev => prev.map(s => {
         if (s.id === statusId) {
           return {
@@ -459,109 +789,10 @@ export function TikTokStyleFeed() {
     }
   };
   
-  // Handle media upload
-  const handleMediaUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    
-    // Check file size (limit to 10MB)
-    if (file.size > 10 * 1024 * 1024) {
-      toast({
-        variant: 'destructive',
-        title: 'File too large',
-        description: 'Please upload a file smaller than 10MB',
-      });
-      return;
-    }
-    
-    // Determine media type
-    if (file.type.startsWith('image/')) {
-      setMediaType('image');
-    } else if (file.type.startsWith('video/')) {
-      setMediaType('video');
-    } else if (file.type.startsWith('audio/')) {
-      setMediaType('audio');
-    } else {
-      toast({
-        variant: 'destructive',
-        title: 'Unsupported file type',
-        description: 'Please upload an image, video, or audio file',
-      });
-      return;
-    }
-    
-    // Create preview
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      setMediaPreview(e.target?.result as string);
-    };
-    reader.readAsDataURL(file);
-    
-    setMediaUpload(file);
-  };
-  
-  // Clear media upload
-  const clearMediaUpload = () => {
-    setMediaUpload(null);
-    setMediaPreview(null);
-    setMediaType('none');
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-  };
-  
-  // Handle post new status
-  const handlePostStatus = async () => {
-    if (!newStatusText.trim() && mediaType === 'none') {
-      toast({
-        variant: 'destructive',
-        title: 'Empty status',
-        description: 'Please enter some content or attach media for your status update.',
-      });
-      return;
-    }
-    
-    setIsSubmitting(true);
-    
-    try {
-      // Upload media if present
-      let mediaUrl = '';
-      if (mediaUpload) {
-        // In production, this would upload to a server/CDN
-        // For now, we'll create an object URL
-        mediaUrl = URL.createObjectURL(mediaUpload);
-      }
-      
-      const newStatus = await createStatus(newStatusText, mediaType, mediaUrl);
-      
-      if (newStatus) {
-        setStatusUpdates([newStatus, ...statusUpdates]);
-        setNewStatusText('');
-        setShowPostDialog(false);
-        clearMediaUpload();
-        
-        toast({
-          title: 'Status posted',
-          description: 'Your status update has been posted successfully.',
-        });
-      } else {
-        throw new Error('Failed to create status');
-      }
-    } catch (error) {
-      console.error('Error posting status:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Failed to post status. Please try again later.',
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+  // Post upgrade feature removed
   
   // Handle copy link to status
   const handleCopyLink = (statusId: string) => {
-    // In a real app, this would be a proper URL to the status
     const statusLink = `${window.location.origin}/status/${statusId}`;
     navigator.clipboard.writeText(statusLink);
     
@@ -571,73 +802,153 @@ export function TikTokStyleFeed() {
       duration: 1500,
     });
     
-    // Also increment share count
     handleShare(statusId);
   };
   
-  // Handle share to Twitter
-  const handleShareToTwitter = (statusId: string, statusText: string) => {
+  // Handle upvote
+  const handleUpvote = async (statusId: string) => {
     const status = statusUpdates.find(s => s.id === statusId);
     if (!status) return;
     
-    const tweetText = encodeURIComponent(`${statusText.substring(0, 100)}${statusText.length > 100 ? '...' : ''}`);
-    const tweetUrl = encodeURIComponent(`${window.location.origin}/status/${statusId}`);
-    const twitterShareUrl = `https://twitter.com/intent/tweet?text=${tweetText}&url=${tweetUrl}`;
+    const currentVoteStatus = voteStatus[statusId] || 'none';
+    let newVoteStatus: 'upvoted' | 'downvoted' | 'none';
+    let likesChange = 0;
     
-    window.open(twitterShareUrl, '_blank');
-    
-    // Update the share count
-    handleShare(statusId);
-  };
-  
-  // Handle join live stream
-  const handleJoinLiveStream = (stream: LiveStream) => {
-    setSelectedLiveStream(stream);
-    if (stream.type === 'audio') {
-      setShowAudioStream(true);
+    // Determine the new vote status and likes change
+    if (currentVoteStatus === 'upvoted') {
+      // If already upvoted, remove the upvote
+      newVoteStatus = 'none';
+      likesChange = -1;
+    } else if (currentVoteStatus === 'downvoted') {
+      // If downvoted, change to upvoted (2 point swing)
+      newVoteStatus = 'upvoted';
+      likesChange = 2;
     } else {
-      setShowVideoStream(true);
+      // If no vote, add upvote
+      newVoteStatus = 'upvoted';
+      likesChange = 1;
     }
-  };
-  
-  // Handle start live video
-  const handleStartLiveVideo = async () => {
-    try {
-      setStreamError(null);
-      setShowVideoStream(true);
-      setShowStreamingDialog(false);
-      
-      const stream = await getMediaStream({ video: true, audio: true });
-      
-      if (videoRef.current && stream) {
-        videoRef.current.srcObject = stream;
-        setIsStreamActive(true);
+    
+    // Update UI immediately for responsive feel
+    setVoteStatus(prev => ({
+      ...prev,
+      [statusId]: newVoteStatus
+    }));
+    
+    setStatusUpdates(prev => prev.map(s => {
+      if (s.id === statusId) {
+        return {
+          ...s,
+          likes: s.likes + likesChange
+        };
       }
+      return s;
+    }));
+    
+    // Call API
+    try {
+      await voteOnPost(statusId, newVoteStatus === 'upvoted' ? 'upvote' : 'none');
     } catch (error) {
-      console.error('Error starting video stream:', error);
-      setStreamError('Failed to access camera. Please check your permissions and try again.');
+      console.error('Error upvoting post:', error);
+      
+      // Revert UI changes if API call fails
+      setVoteStatus(prev => ({
+        ...prev,
+        [statusId]: currentVoteStatus
+      }));
+      
+      setStatusUpdates(prev => prev.map(s => {
+        if (s.id === statusId) {
+          return {
+            ...s,
+            likes: s.likes - likesChange
+          };
+        }
+        return s;
+      }));
+      
       toast({
         variant: 'destructive',
-        title: 'Stream Error',
-        description: 'Failed to access camera. Please check your permissions and try again.',
+        title: 'Error',
+        description: 'Failed to update vote. Please try again.',
       });
     }
   };
   
-  // Handle start live audio
-  const handleStartLiveAudio = () => {
-    setShowAudioStream(true);
-    setShowStreamingDialog(false);
-  };
-  
-  // Handle end stream
-  const handleEndStream = () => {
-    if (isStreamActive) {
-      stopMediaStream();
-      setIsStreamActive(false);
+  // Handle downvote
+  const handleDownvote = async (statusId: string) => {
+    const status = statusUpdates.find(s => s.id === statusId);
+    if (!status) return;
+    
+    const currentVoteStatus = voteStatus[statusId] || 'none';
+    let newVoteStatus: 'upvoted' | 'downvoted' | 'none';
+    let likesChange = 0;
+    
+    // Determine the new vote status and likes change
+    if (currentVoteStatus === 'downvoted') {
+      // If already downvoted, remove the downvote
+      newVoteStatus = 'none';
+      likesChange = 1; // Removing a downvote increases the count
+    } else if (currentVoteStatus === 'upvoted') {
+      // If upvoted, change to downvoted (2 point swing)
+      newVoteStatus = 'downvoted';
+      likesChange = -2;
+    } else {
+      // If no vote, add downvote
+      newVoteStatus = 'downvoted';
+      likesChange = -1;
     }
-    setShowVideoStream(false);
-    setShowAudioStream(false);
+    
+    // Update UI immediately for responsive feel
+    setVoteStatus(prev => ({
+      ...prev,
+      [statusId]: newVoteStatus
+    }));
+    
+    setStatusUpdates(prev => prev.map(s => {
+      if (s.id === statusId) {
+        return {
+          ...s,
+          likes: s.likes + likesChange
+        };
+      }
+      return s;
+    }));
+    
+    // Call API
+    try {
+      await voteOnPost(statusId, newVoteStatus === 'downvoted' ? 'downvote' : 'none');
+    } catch (error) {
+      console.error('Error downvoting post:', error);
+      
+      // Revert UI changes if API call fails
+      setVoteStatus(prev => ({
+        ...prev,
+        [statusId]: currentVoteStatus
+      }));
+      
+      setStatusUpdates(prev => prev.map(s => {
+        if (s.id === statusId) {
+          return {
+            ...s,
+            likes: s.likes - likesChange
+          };
+        }
+        return s;
+      }));
+      
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to update vote. Please try again.',
+      });
+    }
+  };
+
+  // Handle playing a stream
+  const handlePlayStream = (stream: LiveStream) => {
+    setSelectedStream(stream);
+    setShowStreamDialog(true);
   };
   
   // Initial data loading
@@ -645,20 +956,23 @@ export function TikTokStyleFeed() {
     const loadInitialData = async () => {
       setIsLoading(true);
       try {
-        const [updates, streams] = await Promise.all([
-          fetchStatusUpdates(),
-          fetchLiveStreams()
-        ]);
+        const updates = await fetchStatusUpdates(1);
+        
+        // Initialize with default vote status
+        const initialVoteStatus: Record<string, 'upvoted' | 'downvoted' | 'none'> = {};
+        updates.forEach(update => {
+          initialVoteStatus[update.id] = 'none';
+        });
+        setVoteStatus(initialVoteStatus);
         
         setStatusUpdates(updates);
-        setLiveStreams(streams);
-        setPage(2); // Next page to load would be page 2
+        setPage(1);
       } catch (error) {
         console.error('Error loading initial data:', error);
         toast({
-          variant: 'destructive',
           title: 'Error',
-          description: 'Failed to load feed data. Please try refreshing the page.',
+          description: 'Failed to load content. Please try again.',
+          variant: 'destructive',
         });
       } finally {
         setIsLoading(false);
@@ -666,305 +980,732 @@ export function TikTokStyleFeed() {
     };
     
     loadInitialData();
-  }, []);
+  }, [toast]);
   
-  // Clean up media streams when component unmounts
-  useEffect(() => {
-    return () => {
-      if (isStreamActive) {
-        stopMediaStream();
-      }
-    };
-  }, [isStreamActive, stopMediaStream]);
-  
-  // Filter content based on active tab
-  const filteredContent = () => {
-    switch (activeTab) {
-      case 'feeds':
-        return { statusUpdates, liveStreams: [] }
-      case 'status':
-        return { statusUpdates, liveStreams }
-      default:
-        return { statusUpdates, liveStreams: [] }
-    }
-  }
-  
-  const { statusUpdates: filteredStatusUpdates, liveStreams: filteredLiveStreams } = filteredContent()
+  // No filtering needed since we removed tabs
+  const filteredStatusUpdates = statusUpdates;
   
   return (
-    <div className="space-y-4">
-      <Card className="border-0 shadow-sm bg-background/60 backdrop-blur-sm">
-        <div className="p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-semibold tracking-tight"></h2>
-            <div className="flex space-x-3">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => setShowPostDialog(true)}
-                className="rounded-full px-4 hover:bg-primary/10 border-none shadow-sm"
-              >
-                Post Update
-              </Button>
-              <Button 
-                variant="default" 
-                size="sm"
-                className="rounded-full px-4 shadow-sm"
-                onClick={() => setShowStreamingDialog(true)}
-              >
-                Streaming
-              </Button>
+    <div className="responsive-layout w-full gap-0 mx-auto max-w-full px-0 py-0 bg-background">
+      {/* Left Sidebar */}
+      <div className="left-sidebar hidden lg:block w-64 flex-shrink-0">
+        <Card className="sticky top-4 border-0 shadow-sm rounded-xl overflow-hidden">
+          {/* Live Stream Preview Section */}
+          {isStreamActive && (
+            <div className="p-4 border-b border-border">
+              <h3 className="text-sm font-semibold mb-2">Your Live Stream</h3>
+              <div className="rounded-lg overflow-hidden bg-muted mb-2">
+                {streamType === 'video' ? (
+                  <div className="relative aspect-video bg-black">
+                    <video 
+                      ref={videoRef} 
+                      autoPlay 
+                      muted 
+                      playsInline
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute top-2 left-2 bg-red-500 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1">
+                      <span className="h-2 w-2 rounded-full bg-white animate-pulse"></span>
+                      LIVE
+                    </div>
+                  </div>
+                ) : streamType === 'audio' ? (
+                  <div className="p-4 flex items-center justify-between bg-muted/50">
+                    <div className="flex items-center gap-2">
+                      <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center">
+                        <Mic className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">Audio Stream</p>
+                        <p className="text-xs text-muted-foreground">Live</p>
+                      </div>
+                    </div>
+                    <audio ref={audioRef} className="hidden" autoPlay />
+                  </div>
+                ) : null}
+              </div>
+              <div className="flex justify-between items-center">
+                <p className="text-xs text-muted-foreground">
+                  {streamTitle || `${streamType === 'video' ? 'Video' : 'Audio'} Stream`}
+                </p>
+                <Button 
+                  size="sm" 
+                  variant="destructive" 
+                  className="h-7 text-xs"
+                  onClick={handleStopStream}
+                >
+                  End Stream
+                </Button>
+              </div>
             </div>
-          </div>
+          )}
           
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid grid-cols-2 mb-6 rounded-full h-12 p-1 bg-muted/50">
-              <TabsTrigger value="feeds" className="rounded-full data-[state=active]:bg-background data-[state=active]:shadow-sm">
-                Feeds
-              </TabsTrigger>
-              <TabsTrigger value="status" className="rounded-full data-[state=active]:bg-background data-[state=active]:shadow-sm">
-                Status
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-          
-          <div className="space-y-6">
-            {/* Live Streams */}
-            {filteredLiveStreams.length > 0 && (
-              <div className="space-y-5">
-                {filteredLiveStreams.map(stream => (
-                  <Card key={stream.id} className="overflow-hidden border-0 shadow-md rounded-xl">
-                    <div className="relative">
-                      {/* Stream Preview */}
-                      <div className="bg-gradient-to-r from-indigo-600 to-violet-600 h-56 flex items-center justify-center">
-                        {stream.type === 'audio' ? (
-                          <div className="text-center">
-                            <Radio className="h-16 w-16 text-white opacity-90 mb-2" />
-                            <div className="flex justify-center space-x-2">
-                              {[1, 2, 3, 4, 5].map(i => (
-                                <div 
-                                  key={i} 
-                                  className="bg-white w-1 rounded-full animate-pulse" 
-                                  style={{
-                                    height: `${Math.random() * 40 + 10}px`,
-                                    animationDuration: `${Math.random() * 1 + 0.5}s`
-                                  }}
-                                />
-                              ))}
+          {/* Live Streams List - WhatsApp Status Style */}
+          {liveStreams.length > 0 && (
+            <div className="p-4 border-b border-border">
+              <h3 className="text-sm font-semibold mb-3">Live Stories</h3>
+              <div className="flex flex-col space-y-4">
+                {/* Active stream at the top if exists */}
+                {isStreamActive && activeStream && (
+                  <div className="relative">
+                    <div className="rounded-lg overflow-hidden border-2 border-primary shadow-md">
+                      {streamType === 'video' ? (
+                        <div className="aspect-[9/16] bg-black relative">
+                          <video 
+                            ref={videoRef} 
+                            autoPlay 
+                            muted 
+                            playsInline
+                            className="w-full h-full object-cover"
+                          />
+                          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-background/90 to-transparent p-3">
+                            <div className="flex items-center gap-2">
+                              <Avatar className="h-8 w-8 border-2 border-primary">
+                                <AvatarImage src="/placeholder-avatar.jpg" alt="Your Avatar" />
+                                <AvatarFallback className="bg-primary/10 text-primary">YA</AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <p className="text-xs font-medium text-foreground">{streamTitle || 'Your Live Stream'}</p>
+                                <p className="text-xs text-muted-foreground">Live now</p>
+                              </div>
                             </div>
                           </div>
-                        ) : (
-                          <Video className="h-16 w-16 text-white opacity-90" />
-                        )}
-                      </div>
-                      
-                      {/* Live Badge */}
-                      <Badge 
-                        variant="destructive" 
-                        className="absolute top-4 left-4 flex items-center gap-1 px-3 py-1 rounded-full font-medium"
-                      >
-                        <span className="relative flex h-2 w-2">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                          <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
-                        </span>
-                        LIVE
-                      </Badge>
-                      
-                      {/* Viewers Count */}
-                      <div className="absolute top-4 right-4 bg-black/60 text-white text-xs px-3 py-1 rounded-full flex items-center gap-1 backdrop-blur-sm">
-                        <Users className="h-3 w-3" />
-                        {stream.viewers}
-                      </div>
-                      
-                      {/* Duration */}
-                      <div className="absolute bottom-4 right-4 bg-black/60 text-white text-xs px-3 py-1 rounded-full flex items-center gap-1 backdrop-blur-sm">
-                        <Clock className="h-3 w-3" />
-                        {formatDuration(stream.duration)}
-                      </div>
-                    </div>
-                    
-                    <div className="p-5">
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-center space-x-3">
-                          <Avatar className="border-2 border-background h-10 w-10">
-                            <AvatarImage src={stream.userAvatar} alt={stream.userName} />
-                            <AvatarFallback className="bg-primary/10 text-primary">{stream.userName.charAt(0)}</AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <h3 className="font-semibold text-base">{stream.title}</h3>
-                            <p className="text-sm text-muted-foreground">{stream.userName}</p>
+                          <div className="absolute top-2 right-2">
+                            <Button 
+                              size="sm" 
+                              variant="destructive" 
+                              className="h-7 w-7 p-0 rounded-full"
+                              onClick={handleStopStream}
+                            >
+                              <StopCircle className="h-4 w-4" />
+                            </Button>
                           </div>
                         </div>
-                        <Button 
-                          onClick={() => handleJoinLiveStream(stream)}
-                          className="rounded-full px-4 shadow-sm"
-                        >
-                          Join Stream
-                        </Button>
-                      </div>
-                      <p className="mt-3 text-sm text-muted-foreground">{stream.description}</p>
+                      ) : streamType === 'audio' ? (
+                        <div className="aspect-[9/16] bg-gradient-to-b from-primary/10 to-background relative p-4 flex flex-col justify-between">
+                          <div className="absolute top-2 right-2">
+                            <Button 
+                              size="sm" 
+                              variant="destructive" 
+                              className="h-7 w-7 p-0 rounded-full"
+                              onClick={handleStopStream}
+                            >
+                              <StopCircle className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          
+                          <div className="flex-1 flex items-center justify-center">
+                            <div className="h-20 w-20 rounded-full bg-primary/20 flex items-center justify-center">
+                              <Mic className="h-10 w-10 text-primary" />
+                            </div>
+                          </div>
+                          
+                          <audio ref={audioRef} className="hidden" autoPlay />
+                          
+                          <div className="mt-4">
+                            <div className="flex items-center gap-2">
+                              <Avatar className="h-8 w-8 border-2 border-primary">
+                                <AvatarImage src="/placeholder-avatar.jpg" alt="Your Avatar" />
+                                <AvatarFallback className="bg-primary/10 text-primary">YA</AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <p className="text-xs font-medium text-foreground">{streamTitle || 'Your Audio Stream'}</p>
+                                <p className="text-xs text-muted-foreground">Live now</p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ) : null}
                     </div>
-                  </Card>
+                    <div className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-primary border-2 border-background flex items-center justify-center">
+                      <span className="text-[10px] text-primary-foreground font-bold">LIVE</span>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Other live streams */}
+                {liveStreams.filter(stream => stream.isLive && (!activeStream || stream.id !== activeStream.id)).map((stream, index) => (
+                  <div 
+                    key={stream.id} 
+                    className="relative cursor-pointer hover:opacity-90 transition-opacity"
+                    onClick={() => handlePlayStream(stream)}
+                  >
+                    <div className="rounded-lg overflow-hidden border-2 border-muted shadow-sm">
+                      {stream.mediaType === 'video' ? (
+                        <div className="aspect-[9/16] bg-gradient-to-b from-muted to-card relative">
+                          {/* Placeholder for video thumbnail */}
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <Video className="h-10 w-10 text-muted-foreground/50" />
+                          </div>
+                          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-background/90 to-transparent p-3">
+                            <div className="flex items-center gap-2">
+                              <Avatar className="h-8 w-8 border-2 border-muted-foreground/30">
+                                <AvatarImage src={stream.userAvatar} alt={stream.userName} />
+                                <AvatarFallback className="bg-primary/10 text-primary">{stream.userName.charAt(0)}</AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <p className="text-xs font-medium text-foreground">{stream.title}</p>
+                                <p className="text-xs text-muted-foreground">{stream.userName}</p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="aspect-[9/16] bg-gradient-to-b from-primary/5 to-background relative p-4 flex flex-col justify-between">
+                          <div className="flex-1 flex items-center justify-center">
+                            <div className="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center">
+                              <Mic className="h-10 w-10 text-primary/70" />
+                            </div>
+                          </div>
+                          
+                          <div className="mt-4">
+                            <div className="flex items-center gap-2">
+                              <Avatar className="h-8 w-8 border-2 border-muted-foreground/30">
+                                <AvatarImage src={stream.userAvatar} alt={stream.userName} />
+                                <AvatarFallback className="bg-primary/10 text-primary">{stream.userName.charAt(0)}</AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <p className="text-xs font-medium text-foreground">{stream.title}</p>
+                                <p className="text-xs text-muted-foreground">{stream.userName}</p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    <div className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-primary border-2 border-background flex items-center justify-center">
+                      <span className="text-[10px] text-primary-foreground font-bold">LIVE</span>
+                    </div>
+                  </div>
+                ))}
+                
+                {/* Past streams (not live) */}
+                {liveStreams.filter(stream => !stream.isLive).map((stream, index) => (
+                  <div 
+                    key={stream.id} 
+                    className="relative cursor-pointer hover:opacity-90 transition-opacity"
+                    onClick={() => handlePlayStream(stream)}
+                  >
+                    <div className="rounded-lg overflow-hidden border-2 border-muted/30 shadow-sm">
+                      {stream.mediaType === 'video' ? (
+                        <div className="aspect-[9/16] bg-gradient-to-b from-muted/50 to-card/50 relative">
+                          {/* Placeholder for video thumbnail */}
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <Video className="h-10 w-10 text-muted-foreground/40" />
+                          </div>
+                          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-background/80 to-transparent p-3">
+                            <div className="flex items-center gap-2">
+                              <Avatar className="h-8 w-8 border-2 border-muted-foreground/20">
+                                <AvatarImage src={stream.userAvatar} alt={stream.userName} />
+                                <AvatarFallback className="bg-primary/5 text-primary/70">{stream.userName.charAt(0)}</AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <p className="text-xs font-medium text-foreground/80">{stream.title}</p>
+                                <p className="text-xs text-muted-foreground/70">{stream.userName}</p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="aspect-[9/16] bg-gradient-to-b from-muted/30 to-background relative p-4 flex flex-col justify-between">
+                          <div className="flex-1 flex items-center justify-center">
+                            <div className="h-20 w-20 rounded-full bg-muted flex items-center justify-center">
+                              <Mic className="h-10 w-10 text-muted-foreground/50" />
+                            </div>
+                          </div>
+                          
+                          <div className="mt-4">
+                            <div className="flex items-center gap-2">
+                              <Avatar className="h-8 w-8 border-2 border-muted-foreground/20">
+                                <AvatarImage src={stream.userAvatar} alt={stream.userName} />
+                                <AvatarFallback className="bg-primary/5 text-primary/70">{stream.userName.charAt(0)}</AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <p className="text-xs font-medium text-foreground/80">{stream.title}</p>
+                                <p className="text-xs text-muted-foreground/70">{stream.userName}</p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    <div className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-muted-foreground border-2 border-background flex items-center justify-center">
+                      <span className="text-[10px] text-background font-bold">END</span>
+                    </div>
+                  </div>
                 ))}
               </div>
-            )}
+            </div>
+          )}
+          
+
+        </Card>
+      </div>
+      
+      {/* Center Feed Area */}
+      <div className="main-column flex-1 min-w-0 w-full max-w-full mx-auto md:mx-0">
+        <Card className="border-0 shadow-md rounded-lg bg-card dark:bg-card/90 backdrop-blur-sm overflow-hidden h-full">
+          <div className="p-6">
+            {/* Create Post Button */}
+            <div className="flex items-center gap-2 mb-4">
+              <Dialog open={showPostDialog} onOpenChange={setShowPostDialog}>
+                <DialogTrigger asChild>
+                  <Button 
+                    size="sm"
+                    className="rounded-full px-3 py-1 h-8 text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-1.5"
+                  >
+                    <PenSquare className="h-3 w-3" />
+                    Create Post
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[500px] rounded-xl border-0 shadow-lg">
+                  <DialogHeader>
+                    <DialogTitle className="text-lg font-semibold">Create a post</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-3 py-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Avatar className="h-8 w-8 border border-muted">
+                        <AvatarImage src="/placeholder-avatar.jpg" alt="Your Avatar" />
+                        <AvatarFallback className="bg-primary/10 text-primary">YA</AvatarFallback>
+                      </Avatar>
+                      <span className="text-sm font-medium">Current User</span>
+                    </div>
+                    
+                    {/* Stream Preview */}
+                    {showStreamPreview && (
+                      <div className="rounded-lg overflow-hidden bg-muted mb-2">
+                        {streamType === 'video' ? (
+                          <div className="relative aspect-video bg-black">
+                            <video 
+                              ref={videoRef} 
+                              autoPlay 
+                              muted 
+                              playsInline
+                              className="w-full h-full object-cover"
+                            />
+                            <div className="absolute bottom-2 right-2">
+                              <Button 
+                                size="sm" 
+                                variant="destructive" 
+                                className="h-7 w-7 p-0 rounded-full"
+                                onClick={handleStopStream}
+                              >
+                                <StopCircle className="h-4 w-4" />
+                              </Button>
+                            </div>
+                            <div className="absolute top-2 left-2 bg-red-500 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1">
+                              <span className="h-2 w-2 rounded-full bg-white animate-pulse"></span>
+                              LIVE
+                            </div>
+                          </div>
+                        ) : streamType === 'audio' ? (
+                          <div className="p-4 flex items-center justify-between bg-muted/50">
+                            <div className="flex items-center gap-2">
+                              <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center">
+                                <Mic className="h-5 w-5 text-primary" />
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium">Audio Stream</p>
+                                <p className="text-xs text-muted-foreground">Recording...</p>
+                              </div>
+                            </div>
+                            <audio ref={audioRef} className="hidden" autoPlay />
+                            <Button 
+                              size="sm" 
+                              variant="destructive" 
+                              className="h-7 w-7 p-0 rounded-full"
+                              onClick={handleStopStream}
+                            >
+                              <StopCircle className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ) : null}
+                      </div>
+                    )}
+                    
+                    <Textarea 
+                      placeholder="What would you like to share?" 
+                      className="min-h-[120px] text-sm"
+                      value={postContent}
+                      onChange={(e) => setPostContent(e.target.value)}
+                    />
+                    
+                    {/* Stream title input when streaming */}
+                    {isStreamActive && (
+                      <Input
+                        placeholder="Add a title to your stream"
+                        value={streamTitle}
+                        onChange={(e) => setStreamTitle(e.target.value)}
+                        className="text-sm"
+                      />
+                    )}
+                    
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="rounded-full h-7 text-xs"
+                        disabled={isStreamActive}
+                      >
+                        <ImageIcon className="h-3 w-3 mr-1" />
+                        Image
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="rounded-full h-7 text-xs"
+                        disabled={isStreamActive}
+                      >
+                        <Link className="h-3 w-3 mr-1" />
+                        Link
+                      </Button>
+                      
+                      {/* Video streaming button */}
+                      {!isStreamActive ? (
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="rounded-full h-7 text-xs"
+                          onClick={() => handleStartStream('video')}
+                          disabled={isStreamLoading}
+                        >
+                          <Video className="h-3 w-3 mr-1" />
+                          Video Stream
+                        </Button>
+                      ) : streamType === 'video' ? (
+                        <Button 
+                          variant="destructive" 
+                          size="sm" 
+                          className="rounded-full h-7 text-xs"
+                          onClick={handleStopStream}
+                        >
+                          <VideoOff className="h-3 w-3 mr-1" />
+                          Stop Video
+                        </Button>
+                      ) : null}
+                      
+                      {/* Audio streaming button */}
+                      {!isStreamActive ? (
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="rounded-full h-7 text-xs"
+                          onClick={() => handleStartStream('audio')}
+                          disabled={isStreamLoading}
+                        >
+                          <Mic className="h-3 w-3 mr-1" />
+                          Audio Stream
+                        </Button>
+                      ) : streamType === 'audio' ? (
+                        <Button 
+                          variant="destructive" 
+                          size="sm" 
+                          className="rounded-full h-7 text-xs"
+                          onClick={handleStopStream}
+                        >
+                          <MicOff className="h-3 w-3 mr-1" />
+                          Stop Audio
+                        </Button>
+                      ) : null}
+                    </div>
+                    
+                    {/* Stream error message */}
+                    {streamError && (
+                      <div className="text-xs text-destructive flex items-center gap-1">
+                        <AlertCircle className="h-3 w-3" />
+                        {streamError}
+                      </div>
+                    )}
+                  </div>
+                  <DialogFooter>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => {
+                        if (isStreamActive) {
+                          handleStopStream();
+                        }
+                        setShowPostDialog(false);
+                      }}
+                      className="h-8 text-xs"
+                    >
+                      Cancel
+                    </Button>
+                    <Button 
+                      size="sm"
+                      onClick={handleCreatePost}
+                      disabled={isCreatingPost || (!postContent.trim() && !isStreamActive)}
+                      className="h-8 text-xs"
+                    >
+                      {isCreatingPost ? (
+                        <>
+                          <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                          Posting...
+                        </>
+                      ) : 'Post'}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </div>
             
+            {/* Feed Sorting Options */}
+            <div className="flex justify-between items-center mb-6 border-b border-border pb-4">
+              <div className="flex gap-2 overflow-x-auto hide-scrollbar">
+                <Button 
+                  variant="ghost" 
+                  className="px-4 py-2 h-auto rounded-full text-sm font-medium text-primary bg-primary/10"
+                >
+                  Popular
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  className="px-4 py-2 h-auto rounded-full text-sm font-medium text-muted-foreground hover:bg-muted"
+                >
+                  New
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  className="px-4 py-2 h-auto rounded-full text-sm font-medium text-muted-foreground hover:bg-muted"
+                >
+                  Top
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  className="px-4 py-2 h-auto rounded-full text-sm font-medium text-muted-foreground hover:bg-muted"
+                >
+                  Rising
+                </Button>
+              </div>
+            </div>
+            
+            <div className="space-y-6">
             {/* Status Updates */}
             {filteredStatusUpdates.map((status, index) => (
               <div 
                 key={status.id} 
                 ref={index === filteredStatusUpdates.length - 1 ? lastElementRef : null}
               >
-                <Card className="overflow-hidden border-0 shadow-sm rounded-xl hover:shadow-md transition-shadow duration-200">
-                  <div className="p-5">
-                    <div className="flex items-center space-x-3 mb-4">
-                      <Avatar className="h-10 w-10 border border-muted">
+                <Card 
+                  className="overflow-hidden border shadow-sm rounded-xl hover:shadow-md transition-all duration-300 bg-card dark:bg-card/95 cursor-pointer"
+                  onClick={() => handlePostClick(status.id)}
+                >
+                  <div className="flex">
+                    {/* Reddit-style voting buttons */}
+                    <div className="flex flex-col items-center bg-muted/20 dark:bg-muted/10 px-2 py-3 rounded-l-xl">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className={`h-7 w-7 p-0 rounded-full hover:bg-muted transition-colors duration-200 ${voteStatus[status.id] === 'upvoted' ? 'text-orange-500' : ''}`}
+                        onClick={() => handleUpvote(status.id)}
+                      >
+                        <ArrowUp className="h-4 w-4" />
+                      </Button>
+                      <span className={`font-medium text-xs py-1 ${voteStatus[status.id] === 'upvoted' ? 'text-orange-500' : voteStatus[status.id] === 'downvoted' ? 'text-blue-500' : ''}`}>
+                        {status.likes}
+                      </span>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className={`h-7 w-7 p-0 rounded-full hover:bg-muted transition-colors duration-200 ${voteStatus[status.id] === 'downvoted' ? 'text-blue-500' : ''}`}
+                        onClick={() => handleDownvote(status.id)}
+                      >
+                        <ArrowDown className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    
+                    <div className="flex-1 p-4">
+                      <div className="flex items-center space-x-2 mb-2">
+                      <Avatar className="h-8 w-8 border border-muted">
                         <AvatarImage src={status.userAvatar} alt={status.userName} />
                         <AvatarFallback className="bg-primary/10 text-primary">{status.userName.charAt(0)}</AvatarFallback>
                       </Avatar>
                       <div>
-                        <h3 className="font-semibold text-base">{status.userName}</h3>
+                        <h3 className="font-semibold text-sm">{status.userName}</h3>
                         <p className="text-xs text-muted-foreground">{formatRelativeTime(status.timestamp)}</p>
                       </div>
                     </div>
                     
-                    <p className="mb-4 text-base leading-relaxed">{status.content}</p>
+                    <p className="mb-3 text-sm leading-relaxed">{status.content}</p>
                     
                     {/* Media Content */}
                     {status.mediaType === 'image' && status.mediaUrl && (
-                      <div className="rounded-xl overflow-hidden mb-4 bg-muted h-72 flex items-center justify-center">
-                        <ImageIcon className="h-12 w-12 text-muted-foreground opacity-30" />
+                      <div className="rounded-xl overflow-hidden mb-4 bg-muted dark:bg-muted/30 h-72 flex items-center justify-center">
+                        <div className="h-12 w-12 text-muted-foreground dark:text-muted-foreground/50 opacity-30 flex items-center justify-center">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/>
+                            <circle cx="9" cy="9" r="2"/>
+                            <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
+                          </svg>
+                        </div>
                         {/* In a real app, this would be an actual image */}
                         {/* <img src={status.mediaUrl} alt="Status media" className="w-full h-full object-cover" /> */}
                       </div>
                     )}
                     
-                    {status.mediaType === 'video' && status.mediaUrl && (
-                      <div className="rounded-xl overflow-hidden mb-4 bg-muted h-72 flex items-center justify-center relative">
-                        <Video className="h-12 w-12 text-muted-foreground opacity-30" />
-                        <Button variant="ghost" size="icon" className="absolute inset-0 m-auto rounded-full bg-black/40 hover:bg-black/60 h-16 w-16">
-                          <Play className="h-8 w-8 text-white" />
-                        </Button>
-                        {/* In a real app, this would be an actual video player */}
-                      </div>
-                    )}
-                    
-                    {status.mediaType === 'audio' && status.mediaUrl && (
-                      <div className="rounded-xl overflow-hidden mb-4 bg-muted/50 p-4 flex items-center space-x-3">
-                        <Button variant="ghost" size="icon" className="rounded-full bg-primary/10 hover:bg-primary/20 h-10 w-10">
-                          <Play className="h-5 w-5 text-primary" />
-                        </Button>
-                        <div className="flex-1">
-                          <div className="h-2 bg-primary/20 rounded-full">
-                            <div className="h-2 bg-primary rounded-full w-1/3"></div>
-                          </div>
-                        </div>
-                        <span className="text-xs text-muted-foreground font-medium">1:24</span>
-                      </div>
-                    )}
-                    
-                    <div className="flex items-center justify-between mt-3 pt-3 border-t border-muted/50">
-                      <div className="flex items-center space-x-5">
+                    </div>
+                    <div className="flex items-center justify-between mt-2 pt-2 border-t border-muted/50">
+                      <div className="flex items-center space-x-3">
                         <Button 
                           variant="ghost" 
                           size="sm" 
-                          className={`flex items-center gap-1.5 rounded-full px-3 ${status.hasLiked ? 'text-red-500 bg-red-500/10' : ''}`}
-                          onClick={() => handleLike(status.id)}
+                          className="flex items-center gap-1.5 rounded-md px-2 h-7 text-xs font-medium hover:bg-muted/50"
+                          onClick={(e) => {
+                            e.stopPropagation(); // Prevent triggering the card click
+                            handlePostClick(status.id);
+                          }}
                         >
-                          <Heart className="h-4 w-4" fill={status.hasLiked ? 'currentColor' : 'none'} />
-                          {status.likes}
+                          <MessageSquare className="h-3.5 w-3.5" />
+                          {status.comments} Comments
                         </Button>
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <Button variant="ghost" size="sm" className="flex items-center gap-1.5 rounded-full px-3">
-                              <MessageSquare className="h-4 w-4" />
-                              {status.comments}
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent className="sm:max-w-[500px] rounded-xl border-0 shadow-lg">
-                            <DialogHeader>
-                              <DialogTitle className="text-xl">Add Comment</DialogTitle>
-                            </DialogHeader>
-                            <div className="space-y-4 py-4">
-                              <Textarea 
-                                placeholder="Write your comment..." 
-                                className="min-h-[100px]"
-                                id={`comment-${status.id}`}
-                              />
-                            </div>
-                            <DialogFooter>
-                              <Button 
-                                variant="outline" 
-                                onClick={() => document.getElementById(`dialog-close-${status.id}`)?.click()}
-                              >
-                                Cancel
-                              </Button>
-                              <Button onClick={() => {
-                                const textarea = document.getElementById(`comment-${status.id}`) as HTMLTextAreaElement;
-                                if (textarea && textarea.value) {
-                                  handleComment(status.id, textarea.value);
-                                  document.getElementById(`dialog-close-${status.id}`)?.click();
-                                }
-                              }}>
-                                Post Comment
-                              </Button>
-                            </DialogFooter>
-                            <button id={`dialog-close-${status.id}`} className="hidden" />
-                          </DialogContent>
-                        </Dialog>
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <Button variant="ghost" size="sm" className="flex items-center gap-1.5 rounded-full px-3">
-                              <Share2 className="h-4 w-4" />
-                              {status.shares}
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent className="sm:max-w-[400px] rounded-xl border-0 shadow-lg">
-                            <DialogHeader>
-                              <DialogTitle className="text-xl">Share Post</DialogTitle>
-                              <DialogDescription>
-                                Share this post with your network
-                              </DialogDescription>
-                            </DialogHeader>
-                            <div className="grid grid-cols-2 gap-4 py-4">
-                              <Button 
-                                variant="outline" 
-                                className="w-full"
-                                onClick={() => {
-                                  handleCopyLink(status.id);
-                                  document.getElementById(`share-close-${status.id}`)?.click();
-                                }}
-                              >
-                                Copy Link
-                              </Button>
-                              <Button 
-                                className="w-full"
-                                onClick={() => {
-                                  handleShareToTwitter(status.id, status.content);
-                                  document.getElementById(`share-close-${status.id}`)?.click();
-                                }}
-                              >
-                                Share to Twitter
-                              </Button>
-                            </div>
-                            <button id={`share-close-${status.id}`} className="hidden" />
-                          </DialogContent>
-                        </Dialog>
                         <Button 
                           variant="ghost" 
                           size="sm" 
-                          className={`flex items-center gap-1.5 rounded-full px-3 ${isBookmarked[status.id] ? 'text-yellow-500 bg-yellow-500/10' : ''}`}
+                          className="flex items-center gap-1.5 rounded-md px-2 h-7 text-xs font-medium hover:bg-muted/50"
+                          onClick={() => handleCopyLink(status.id)}
+                        >
+                          <Share2 className="h-3.5 w-3.5" />
+                          Share
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="flex items-center gap-1.5 rounded-md px-2 h-7 text-xs font-medium hover:bg-muted/50"
                           onClick={() => handleBookmark(status.id)}
                         >
-                          <Bookmark className="h-4 w-4" fill={isBookmarked[status.id] ? 'currentColor' : 'none'} />
+                          <Bookmark className="h-3.5 w-3.5" fill={isBookmarked[status.id] ? 'currentColor' : 'none'} />
+                          Save
                         </Button>
                       </div>
-                      <Button variant="ghost" size="sm" className="rounded-full h-8 w-8 p-0">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm" className="rounded-full h-7 w-7 p-0">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-[180px]">
+                          <DropdownMenuItem className="text-xs cursor-pointer">
+                            <Bookmark className="h-3.5 w-3.5 mr-2" />
+                            Save Post
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className="text-xs cursor-pointer">
+                            <Link className="h-3.5 w-3.5 mr-2" />
+                            Copy Link
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className="text-xs cursor-pointer">
+                            <AlertCircle className="h-3.5 w-3.5 mr-2" />
+                            Report Post
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            className="text-xs cursor-pointer text-red-500 focus:text-red-500"
+                            onClick={() => {
+                              // Remove post from UI
+                              setStatusUpdates(prev => prev.filter(s => s.id !== status.id));
+                              
+                              // Show toast
+                              toast({
+                                title: 'Post deleted',
+                                description: 'The post has been successfully deleted',
+                              });
+                            }}
+                          >
+                            <Trash className="h-3.5 w-3.5 mr-2" />
+                            Delete Post
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </div>
                 </Card>
+                
+                {/* Comments section - shown when post is clicked */}
+                {activePostId === status.id && (
+                  <div className="mt-1 mb-4 border border-muted rounded-lg bg-card dark:bg-card/95 p-4 shadow-sm">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-sm font-medium flex items-center gap-1.5">
+                        <MessageSquare className="h-4 w-4" />
+                        Comments ({status.comments})
+                      </h3>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-6 w-6 p-0 rounded-full"
+                        onClick={() => setActivePostId(null)}
+                      >
+                        <ChevronUp className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    
+                    {/* Comment input */}
+                    <div className="mb-4">
+                      <div className="flex items-start gap-2 mb-2">
+                        <Avatar className="h-6 w-6">
+                          <AvatarImage src="/placeholder-avatar.jpg" alt="Your Avatar" />
+                          <AvatarFallback className="bg-primary/10 text-primary">YA</AvatarFallback>
+                        </Avatar>
+                        <Textarea 
+                          placeholder="Add a comment..." 
+                          className="min-h-[60px] text-xs flex-1"
+                          value={commentText}
+                          onChange={(e) => setCommentText(e.target.value)}
+                        />
+                      </div>
+                      <div className="flex justify-end">
+                        <Button 
+                          size="sm"
+                          className="h-7 text-xs"
+                          disabled={!commentText.trim()}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleComment(status.id, commentText);
+                          }}
+                        >
+                          Post
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    {/* Comments list */}
+                    {isLoadingComments ? (
+                      <div className="flex justify-center py-4">
+                        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                      </div>
+                    ) : status.commentsList && status.commentsList.length > 0 ? (
+                      <div className="space-y-3 max-h-[300px] overflow-y-auto">
+                        {status.commentsList.map(comment => (
+                          <div key={comment.id} className="border-b border-muted/50 pb-3">
+                            <div className="flex items-start gap-2">
+                              <Avatar className="h-6 w-6">
+                                <AvatarImage src={comment.userAvatar} alt={comment.userName} />
+                                <AvatarFallback className="bg-primary/10 text-primary">{comment.userName.charAt(0)}</AvatarFallback>
+                              </Avatar>
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs font-semibold">{comment.userName}</span>
+                                  <span className="text-xs text-muted-foreground">{formatRelativeTime(comment.timestamp)}</span>
+                                </div>
+                                <p className="text-xs mt-1">{comment.content}</p>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <Button variant="ghost" size="sm" className="h-5 px-1 text-xs text-muted-foreground">
+                                    <Heart className="h-3 w-3 mr-1" />
+                                    {comment.likes}
+                                  </Button>
+                                  <Button variant="ghost" size="sm" className="h-5 px-1 text-xs text-muted-foreground">
+                                    Reply
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-4 text-muted-foreground text-xs">
+                        No comments yet. Be the first to comment!
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             ))}
             
@@ -982,270 +1723,202 @@ export function TikTokStyleFeed() {
           </div>
         </div>
       </Card>
+      </div>
       
-      {/* Post Status Dialog */}
-      <Dialog open={showPostDialog} onOpenChange={setShowPostDialog}>
-        <DialogContent className="sm:max-w-[500px] rounded-xl border-0 shadow-lg">
-          <DialogHeader>
-            <DialogTitle className="text-xl">Create Post</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <Textarea 
-              value={newStatusText}
-              onChange={(e) => setNewStatusText(e.target.value)}
-              placeholder="What's happening in the market today?"
-              className="min-h-[120px] resize-none focus-visible:ring-primary"
-            />
-            
-            {mediaPreview && (
-              <div className="relative rounded-lg overflow-hidden bg-muted/50">
-                {mediaType === 'image' && (
-                  <img 
-                    src={mediaPreview} 
-                    alt="Upload preview" 
-                    className="w-full max-h-[200px] object-contain"
-                  />
-                )}
-                {mediaType === 'video' && (
-                  <div className="aspect-video bg-black/10 flex items-center justify-center">
-                    <video 
-                      src={mediaPreview} 
-                      controls 
-                      className="max-h-[200px] max-w-full"
-                    />
-                  </div>
-                )}
-                {mediaType === 'audio' && (
-                  <div className="p-4 flex items-center space-x-3">
-                    <Button variant="ghost" size="icon" className="rounded-full bg-primary/10 hover:bg-primary/20 h-10 w-10">
-                      <Play className="h-5 w-5 text-primary" />
-                    </Button>
-                    <div className="flex-1">
-                      <div className="h-2 bg-primary/20 rounded-full">
-                        <div className="h-2 bg-primary rounded-full w-1/3"></div>
-                      </div>
-                    </div>
-                    <audio src={mediaPreview} className="hidden" />
-                  </div>
-                )}
-                <Button 
-                  variant="destructive" 
-                  size="icon"
-                  className="absolute top-2 right-2 h-8 w-8 rounded-full"
-                  onClick={clearMediaUpload}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            )}
-            
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <input 
-                  type="file" 
-                  className="hidden" 
-                  ref={fileInputRef}
-                  onChange={handleMediaUpload}
-                  accept="image/*,video/*,audio/*"
-                />
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="text-primary hover:text-primary/80"
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  <ImageIcon className="h-5 w-5 mr-1" />
-                  Media
-                </Button>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => setShowPostDialog(false)}
-                  disabled={isSubmitting}
-                >
-                  Cancel
-                </Button>
-                <Button 
-                  size="sm"
-                  onClick={handlePostStatus}
-                  disabled={isSubmitting || (!newStatusText.trim() && mediaType === 'none')}
-                >
-                  {isSubmitting ? (
-                    <>
-                      <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-background border-t-transparent"></div>
-                      Posting...
-                    </>
-                  ) : (
-                    'Post'
-                  )}
-                </Button>
-              </div>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-      
-      {/* Streaming Features Dialog */}
-      <Dialog open={showStreamingDialog} onOpenChange={setShowStreamingDialog}>
-        <DialogContent className="sm:max-w-[400px] rounded-xl border-0 shadow-lg">
-          <DialogHeader>
-            <DialogTitle className="text-xl">Go Live</DialogTitle>
-            <DialogDescription>
-              Share your insights with your followers in real-time
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid grid-cols-2 gap-4 py-4">
-            <Button 
-              variant="outline" 
-              className="flex flex-col items-center justify-center h-28 p-4"
-              onClick={handleStartLiveAudio}
-            >
-              <Mic className="h-8 w-8 mb-2 text-primary" />
-              <span>Audio Stream</span>
-            </Button>
-            <Button 
-              variant="outline" 
-              className="flex flex-col items-center justify-center h-28 p-4"
-              onClick={handleStartLiveVideo}
-            >
-              <Video className="h-8 w-8 mb-2 text-primary" />
-              <span>Video Stream</span>
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-      
-      {/* Audio Live Stream Dialog */}
-      {showAudioStream && (
-        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
-          <div className="relative max-w-lg w-full bg-background rounded-xl overflow-hidden">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center space-x-3">
-                  <Avatar className="h-12 w-12">
-                    <AvatarImage src="/avatars/default.png" alt="You" />
-                    <AvatarFallback>You</AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <h3 className="font-semibold text-lg">Your Live Audio Stream</h3>
-                    <p className="text-sm text-muted-foreground">Broadcasting live to your followers</p>
-                  </div>
-                </div>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="rounded-full"
-                  onClick={() => setShowAudioStream(false)}
-                >
-                  <X className="h-5 w-5" />
-                </Button>
-              </div>
-              
-              <div className="bg-muted/50 rounded-xl p-8 flex flex-col items-center justify-center">
-                <div className="relative h-24 w-24 rounded-full bg-primary/10 flex items-center justify-center mb-6">
-                  <Mic className="h-12 w-12 text-primary" />
-                  <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-red-500 animate-pulse"></span>
-                </div>
-                
-                <div className="w-full max-w-sm">
-                  <div className="flex justify-center space-x-2 mb-6">
-                    {[1, 2, 3, 4, 5, 6, 7].map(i => (
-                      <div 
-                        key={i} 
-                        className="bg-primary w-1 rounded-full animate-pulse" 
-                        style={{
-                          height: `${Math.random() * 40 + 10}px`,
-                          animationDuration: `${Math.random() * 1 + 0.5}s`
-                        }}
-                      />
-                    ))}
-                  </div>
-                  
-                  <div className="flex items-center justify-between">
-                    <Badge variant="outline" className="flex items-center gap-1">
-                      <Activity className="h-3 w-3" />
-                      Live
-                    </Badge>
-                    <Badge variant="outline" className="flex items-center gap-1">
-                      <Users className="h-3 w-3" />
-                      {Math.floor(Math.random() * 100) + 1} listeners
-                    </Badge>
-                    <Badge variant="outline" className="flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      00:00:00
-                    </Badge>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="flex justify-center mt-6">
-                <Button 
-                  variant="destructive" 
-                  className="rounded-full px-6"
-                  onClick={() => setShowAudioStream(false)}
-                >
-                  End Stream
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-      
-      {/* Video Stream Modal */}
-      {showVideoStream && (
-        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
-          <div className="relative max-w-2xl w-full bg-background rounded-xl overflow-hidden">
-            {streamError ? (
-              <div className="aspect-video bg-black flex items-center justify-center">
-                <div className="text-center text-white p-8">
-                  <AlertCircle className="h-16 w-16 mx-auto mb-4 text-red-500" />
-                  <p className="text-lg font-medium">Stream Error</p>
-                  <p className="text-sm opacity-70 mt-2">{streamError}</p>
-                </div>
-              </div>
-            ) : (
-              <div className="aspect-video bg-black flex items-center justify-center">
-                {isStreamActive ? (
-                  <video 
-                    ref={videoRef} 
-                    autoPlay 
-                    playsInline 
-                    muted 
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="text-center text-white">
-                    <Loader2 className="h-16 w-16 mx-auto mb-4 opacity-50 animate-spin" />
-                    <p className="text-lg font-medium">Starting video stream...</p>
-                    <p className="text-sm opacity-70">Please wait while we set up your camera</p>
-                  </div>
-                )}
-              </div>
-            )}
-            <div className="p-4 flex items-center justify-between bg-background/90 backdrop-blur-sm">
-              <div className="flex items-center space-x-3">
-                <Badge variant="outline" className="flex items-center gap-1 bg-red-500/10 text-red-500 border-red-500/20">
-                  <Activity className="h-3 w-3" />
-                  Live
-                </Badge>
-                <Badge variant="outline" className="flex items-center gap-1">
-                  <Users className="h-3 w-3" />
-                  {Math.floor(Math.random() * 100) + 1} viewers
-                </Badge>
-              </div>
-              <Button 
-                variant="destructive" 
-                onClick={handleEndStream}
-              >
-                End Stream
+      {/* Right Sidebar */}
+      <div className="sidebar-column w-64 flex-shrink-0 hidden lg:block">
+        <Card className="border-0 shadow-md rounded-lg overflow-hidden bg-card dark:bg-card/90 backdrop-blur-sm h-screen sticky top-0">
+          <div className="p-5 space-y-4">
+            <div className="flex justify-between items-center mb-2">
+              <h3 className="font-semibold text-foreground">Tanzania Financial Trends</h3>
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-full hover:bg-muted hover:text-primary transition-colors duration-200">
+                <RefreshCw className="h-4 w-4" />
               </Button>
             </div>
+            
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 p-2 hover:bg-muted rounded-lg transition-colors duration-200 cursor-pointer group">
+                <span className="text-primary font-bold text-lg min-w-[20px]">1</span>
+                <span className="flex-1 truncate content-fit text-foreground group-hover:text-primary transition-colors duration-200">TSE Index rises 3.2%</span>
+                <Badge className="bg-primary/10 text-primary hover:bg-primary/20 transition-colors duration-200">↑</Badge>
+              </div>
+              
+              <div className="flex items-center gap-3 p-2 hover:bg-muted rounded-lg transition-colors duration-200 cursor-pointer group">
+                <span className="text-primary font-bold text-lg min-w-[20px]">2</span>
+                <span className="flex-1 truncate content-fit text-foreground group-hover:text-primary transition-colors duration-200">CRDB Bank Q1 results</span>
+                <Badge className="bg-primary/10 text-primary hover:bg-primary/20 transition-colors duration-200">↑</Badge>
+              </div>
+              
+              <div className="flex items-center gap-3 p-2 hover:bg-muted rounded-lg transition-colors duration-200 cursor-pointer group">
+                <span className="text-primary font-bold text-lg min-w-[20px]">3</span>
+                <span className="flex-1 truncate content-fit text-foreground group-hover:text-primary transition-colors duration-200">Shilling stabilizes against USD</span>
+                <span className="text-xs text-muted-foreground min-w-[40px] text-right">12.5K</span>
+              </div>
+              
+              <div className="flex items-center gap-3 p-2 hover:bg-muted rounded-lg transition-colors duration-200 cursor-pointer group">
+                <span className="text-muted-foreground font-bold text-lg min-w-[20px]">4</span>
+                <span className="flex-1 truncate content-fit text-foreground group-hover:text-primary transition-colors duration-200">BOT policy rate unchanged</span>
+                <span className="text-xs text-muted-foreground min-w-[80px] text-right">Financial News</span>
+              </div>
+              
+              <div className="flex items-center gap-3 p-2 hover:bg-muted rounded-lg transition-colors duration-200 cursor-pointer group">
+                <span className="text-muted-foreground font-bold text-lg min-w-[20px]">5</span>
+                <span className="flex-1 truncate content-fit text-foreground group-hover:text-primary transition-colors duration-200">NMB dividend announcement</span>
+                <span className="text-xs text-muted-foreground min-w-[40px] text-right">8.7K</span>
+              </div>
+              
+              <div className="flex items-center gap-3 p-2 hover:bg-muted rounded-lg transition-colors duration-200 cursor-pointer group">
+                <span className="text-muted-foreground font-bold text-lg min-w-[20px]">6</span>
+                <span className="flex-1 truncate content-fit text-foreground group-hover:text-primary transition-colors duration-200">TBL shares surge 5.4%</span>
+                <span className="text-xs text-muted-foreground min-w-[40px] text-right">7.2K</span>
+              </div>
+            </div>
+            
+            <div className="border-t border-border pt-4">
+              <h4 className="font-medium text-sm mb-3">Most Trending</h4>
+              
+              <div className="bg-muted/30 rounded-lg p-3 space-y-3">
+                <div className="flex items-start gap-2">
+                  <Badge className="bg-primary text-primary-foreground mt-0.5">HOT</Badge>
+                  <div>
+                    <h5 className="font-medium text-sm">Tanzania Mobile Money Transactions Hit Record High</h5>
+                    <p className="text-xs text-muted-foreground mt-1">Mobile money transactions in Tanzania reached a record 12.2 trillion shillings in Q1 2025, marking a 24% increase year-over-year.</p>
+                    <div className="flex items-center gap-2 mt-2">
+                      <Badge variant="outline" className="text-[10px] h-4 px-1">Finance</Badge>
+                      <Badge variant="outline" className="text-[10px] h-4 px-1">Mobile Money</Badge>
+                      <Badge variant="outline" className="text-[10px] h-4 px-1">Growth</Badge>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex justify-between items-center text-xs text-muted-foreground">
+                  <span>32.4K views</span>
+                  <span>Updated 2h ago</span>
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
-      )}
+        </Card>
+      </div>
+      
+      {/* Stream Playback Dialog */}
+      <Dialog open={showStreamDialog} onOpenChange={setShowStreamDialog}>
+        <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto rounded-xl border-0 shadow-lg">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-semibold">
+              {selectedStream?.title || 'Stream'}
+            </DialogTitle>
+            <DialogDescription>
+              {selectedStream?.isLive ? 'Live stream by ' : 'Recorded by '}
+              <span className="font-medium">{selectedStream?.userName}</span>
+              {!selectedStream?.isLive && selectedStream?.duration && (
+                <span className="ml-2 text-xs text-muted-foreground">
+                  Duration: {formatDuration(selectedStream.duration)}
+                </span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-2">
+            {/* Stream Content */}
+            <div className="rounded-lg overflow-hidden bg-black">
+              {selectedStream?.mediaType === 'video' ? (
+                <div className="aspect-video relative">
+                  {selectedStream.isLive ? (
+                    <div className="flex items-center justify-center h-full bg-black text-white">
+                      <div className="text-center">
+                        <div className="animate-pulse flex items-center justify-center mb-2">
+                          <span className="h-3 w-3 rounded-full bg-red-500 mr-2"></span>
+                          <span className="text-sm font-medium">LIVE</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Connecting to live stream...
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <video 
+                      controls 
+                      className="w-full h-full object-contain"
+                      src={selectedStream.mediaUrl}
+                      poster="/video-thumbnail.jpg"
+                    />
+                  )}
+                </div>
+              ) : (
+                <div className="aspect-[16/9] bg-gradient-to-b from-primary/10 to-background p-6 flex flex-col items-center justify-center">
+                  <div className="h-24 w-24 rounded-full bg-primary/20 flex items-center justify-center mb-4">
+                    <Mic className="h-12 w-12 text-primary" />
+                  </div>
+                  
+                  {selectedStream?.isLive ? (
+                    <div className="text-center">
+                      <div className="animate-pulse flex items-center justify-center mb-2">
+                        <span className="h-3 w-3 rounded-full bg-red-500 mr-2"></span>
+                        <span className="text-sm font-medium">LIVE AUDIO</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Connecting to live audio stream...
+                      </p>
+                    </div>
+                  ) : (
+                    <audio 
+                      controls 
+                      className="w-full mt-4" 
+                      src={selectedStream?.mediaUrl}
+                    />
+                  )}
+                </div>
+              )}
+            </div>
+            
+            {/* Stream Info */}
+            <div className="flex items-center gap-3">
+              <Avatar className="h-10 w-10 border border-muted">
+                <AvatarImage src={selectedStream?.userAvatar} alt={selectedStream?.userName} />
+                <AvatarFallback className="bg-primary/10 text-primary">
+                  {selectedStream?.userName.charAt(0)}
+                </AvatarFallback>
+              </Avatar>
+              
+              <div className="flex-1">
+                <h4 className="text-sm font-medium">{selectedStream?.userName}</h4>
+                <p className="text-xs text-muted-foreground">
+                  {selectedStream?.isLive ? 'Started ' : 'Recorded '}
+                  {formatRelativeTime(selectedStream?.startTime || '')}
+                </p>
+              </div>
+              
+              {selectedStream?.isLive && (
+                <Badge className="bg-red-500 text-white">
+                  <span className="h-2 w-2 rounded-full bg-white animate-pulse mr-1"></span>
+                  LIVE
+                </Badge>
+              )}
+            </div>
+            
+            {/* Stream Description - in a real app, you would have this data */}
+            <p className="text-sm text-muted-foreground">
+              {selectedStream?.title}
+              {selectedStream?.isLive ? ' - Watch this live stream about financial insights and market trends.' : ' - Replay this recording about financial insights and market trends.'}
+            </p>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowStreamDialog(false)}>
+              Close
+            </Button>
+            {!selectedStream?.isLive && (
+              <Button>
+                <Share2 className="h-4 w-4 mr-2" />
+                Share
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Post upgrade feature removed */}
     </div>
   )
 }
