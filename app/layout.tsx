@@ -2,12 +2,12 @@ import './globals.css';
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import { Header } from '@/components/Header';
+import { MobileNavigation } from '@/components/MobileNavigation';
 import { Toaster } from '@/components/ui/toaster';
 import { ThemeProvider } from 'next-themes';
 import { Providers } from './providers';
 import { LanguageProvider } from '@/lib/language-context';
 import { ConnectionStatus } from '@/components/ConnectionStatus';
-import { MobileNavBar } from '@/components/MobileNavBar';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -42,8 +42,8 @@ export default function RootLayout({
                 <div className="mobile-container py-2">
                   <ConnectionStatus />
                 </div>
-                <main className="flex-1 pb-16 md:pb-0">{children}</main>
-                <MobileNavBar />
+                <main className="flex-1 pb-16 sm:pb-0">{children}</main>
+                <MobileNavigation />
                 <Toaster />
               </div>
             </LanguageProvider>

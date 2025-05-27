@@ -55,17 +55,6 @@ export function Header() {
       <div className="mobile-container flex h-14 sm:h-16 items-center justify-between">
         {/* Left Section */}
         <div className="flex items-center gap-4">
-          {isAuthenticated && (
-            <Button 
-              variant="outline" 
-              size="icon" 
-              onClick={() => setMenuOpen(true)}
-              className="md:hidden touch-manipulation h-10 w-10"
-              aria-label="Open menu"
-            >
-              <Menu className="h-5 w-5" />
-            </Button>
-          )}
           
           <Link href="/" className="flex items-center gap-2">
             <BarChart2 className="h-6 w-6 text-primary" />
@@ -74,19 +63,19 @@ export function Header() {
 
           <LanguageSwitcher />
 
-          {/* Desktop Navigation */}
+          {/* Desktop Navigation - Hidden on mobile */}
           {isAuthenticated && (
-            <nav className="hidden md:flex items-center gap-1">
+            <nav className="hidden lg:flex items-center gap-1">
               {navigation.map((item) => {
                 const isActive = pathname === item.href
                 return (
                   <Link key={item.href} href={item.href}>
                     <Button 
                       variant={isActive ? "secondary" : "ghost"}
-                      className="gap-2 px-2 sm:px-3"
+                      className="gap-2"
                     >
                       {item.icon && <item.icon className="h-4 w-4" />}
-                      <span className="text-sm">{t(item.translationKey)}</span>
+                      {t(item.translationKey)}
                     </Button>
                   </Link>
                 )
@@ -166,7 +155,7 @@ export function Header() {
                 <span className="text-lg font-bold">Terminal</span>
               </div>
               <Button
-                variant="outline"
+                variant="ghost"
                 size="icon"
                 onClick={() => setMenuOpen(false)}
                 className="touch-manipulation h-12 w-12"
@@ -177,27 +166,26 @@ export function Header() {
             </div>
             
             <div className="flex-1 overflow-y-auto p-4">
-              <h2 className="text-lg font-semibold mb-4">Menu</h2>
-              <nav className="flex flex-col gap-3">
+              <nav className="flex flex-col gap-4">
                 {sidebarNavigation.map((item) => (
                   <Link key={item.href} href={item.href} onClick={() => setMenuOpen(false)}>
                     <Button
-                      variant={pathname === item.href ? "secondary" : "default"}
-                      className="w-full justify-start gap-3 h-14 text-base"
+                      variant={pathname === item.href ? "secondary" : "ghost"}
+                      className="w-full justify-start gap-3 h-14 text-base mobile-text"
                     >
                       {item.icon && <item.icon className="h-5 w-5" />}
-                      <span className="font-medium">{t(item.translationKey)}</span>
+                      {t(item.translationKey)}
                     </Button>
                   </Link>
                 ))}
                 
                 <Link href="/wallet" onClick={() => setMenuOpen(false)}>
                   <Button
-                    variant={pathname === '/wallet' ? "secondary" : "default"}
-                    className="w-full justify-start gap-3 h-14 text-base"
+                    variant={pathname === '/wallet' ? "secondary" : "ghost"}
+                    className="w-full justify-start gap-3 h-14 text-base mobile-text"
                   >
                     <Wallet className="h-5 w-5" />
-                    <span className="font-medium">{t('wallet')}</span>
+                    {t('wallet')}
                   </Button>
                 </Link>
               </nav>
