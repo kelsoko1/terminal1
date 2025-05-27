@@ -1,7 +1,6 @@
 'use client'
 
 import { Card } from '@/components/ui/card'
-import { SocialFeed } from '@/components/social/SocialFeed'
 import { TikTokStyleFeed } from '@/components/social/TikTokStyleFeed'
 import { useAuth } from '@/lib/auth/auth-context'
 import RequireAuth from '@/components/auth/RequireAuth'
@@ -13,8 +12,8 @@ export default function DashboardPage() {
 
   return (
     <RequireAuth>
-      <div className="w-full py-6">
-        <div className="grid gap-6">
+      <div className="w-full py-4 sm:py-6 safe-area-inset safe-area-bottom">
+        <div className="grid gap-4 sm:gap-6 mobile-container">
           {/* TikTok Style Feed - Main Content */}
           <div className="w-full">
             <TikTokStyleFeed />

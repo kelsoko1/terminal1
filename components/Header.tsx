@@ -5,9 +5,10 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store';
 import { Button } from '@/components/ui/button';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 
 import { ThemeToggle } from '@/components/ThemeToggle';
-import { Menu, ArrowLeft, Wallet, Search, BarChart2, LineChart, DollarSign, User } from 'lucide-react';
+import { Menu, ArrowLeft, Wallet, Search, BarChart2, LineChart, DollarSign, User, X, Home } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { SearchMenu } from '@/components/search/SearchMenu';
 import { useAuth } from '@/lib/auth/auth-context';
@@ -50,8 +51,8 @@ export function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-14 items-center justify-between">
+    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 safe-area-inset-top">
+      <div className="mobile-container flex h-14 sm:h-16 items-center justify-between">
         {/* Left Section */}
         <div className="flex items-center gap-4">
           {isAuthenticated && (
@@ -59,15 +60,16 @@ export function Header() {
               variant="ghost" 
               size="icon" 
               onClick={() => setMenuOpen(true)}
-              className="lg:hidden"
+              className="lg:hidden touch-manipulation"
+              aria-label="Open menu"
             >
-              <Menu className="h-5 w-5" />
+              <Menu className="h-6 w-6" />
             </Button>
           )}
           
           <Link href="/" className="flex items-center gap-2">
-            <BarChart2 className="h-6 w-6" />
-            <span className="text-xl font-bold hidden md:inline-block">Terminal</span>
+            <BarChart2 className="h-6 w-6 text-primary" />
+            <span className="text-lg font-bold hidden sm:inline-block">Terminal</span>
           </Link>
 
           <LanguageSwitcher />
@@ -101,43 +103,51 @@ export function Header() {
                 variant="ghost"
                 size="icon"
                 onClick={() => setShowSearchMenu(true)}
+                className="touch-manipulation"
+                aria-label="Search"
               >
-                <Search className="h-4 w-4" />
+                <Search className="h-5 w-5" />
               </Button>
 
-              <Link href="/wallet">
-                <Button variant="outline" size="sm" className="gap-2">
+              <Link href="/wallet" className="hidden sm:block">
+                <Button variant="outline" size="sm" className="gap-2 h-10">
                   <Wallet className="h-4 w-4" />
-                  Wallet
+                  <span className="hidden md:inline">Wallet</span>
                 </Button>
               </Link>
 
-              <Link href="/broker">
-                <Button variant="outline" size="sm" className="gap-2">
+              <Link href="/broker" className="hidden sm:block">
+                <Button 
+                  variant={pathname && pathname.startsWith('/broker') ? "default" : "outline"} 
+                  size="sm" 
+                  className="gap-2 h-10"
+                >
                   <BarChart2 className="h-4 w-4" />
-                  Back Office
+                  <span className="hidden md:inline">Back Office</span>
                 </Button>
               </Link>
             </>
           )}
 
           {isAuthenticated ? (
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={handleLogout}>
-                Logout
+            <div className="flex items-center gap-3">
+              <Button variant="outline" size="sm" onClick={handleLogout} className="h-10">
+                <span className="hidden sm:inline">Logout</span>
+                <User className="h-4 w-4 sm:hidden" />
               </Button>
               <ThemeToggle />
             </div>
           ) : (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               <Link href="/login">
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" className="h-10">
                   Login
                 </Button>
               </Link>
               <Link href="/investor-signup">
-                <Button variant="default" size="sm">
-                  Sign Up
+                <Button variant="default" size="sm" className="h-10">
+                  <span className="hidden xs:inline">Sign Up</span>
+                  <User className="h-4 w-4 xs:hidden" />
                 </Button>
               </Link>
               <ThemeToggle />
@@ -148,37 +158,61 @@ export function Header() {
 
       {/* Mobile Menu */}
       {menuOpen && (
-        <div className="fixed inset-0 z-50 bg-background">
-          <div className="container py-4">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setMenuOpen(false)}
-              className="mb-4"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <nav className="flex flex-col gap-2">
-              {sidebarNavigation.map((item) => (
-                <Link key={item.href} href={item.href} onClick={() => setMenuOpen(false)}>
+        <div className="fixed inset-0 z-50 bg-background safe-area-inset safe-area-bottom">
+          <div className="flex flex-col h-full">
+            <div className="flex items-center justify-between p-4 border-b safe-area-top">
+              <div className="flex items-center gap-2">
+                <BarChart2 className="h-6 w-6 text-primary" />
+                <span className="text-lg font-bold">Terminal</span>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setMenuOpen(false)}
+                className="touch-manipulation h-12 w-12"
+                aria-label="Close menu"
+              >
+                <X className="h-6 w-6" />
+              </Button>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-4">
+              <nav className="flex flex-col gap-4">
+                {sidebarNavigation.map((item) => (
+                  <Link key={item.href} href={item.href} onClick={() => setMenuOpen(false)}>
+                    <Button
+                      variant={pathname === item.href ? "secondary" : "ghost"}
+                      className="w-full justify-start gap-3 h-14 text-base mobile-text"
+                    >
+                      {item.icon && <item.icon className="h-5 w-5" />}
+                      {t(item.translationKey)}
+                    </Button>
+                  </Link>
+                ))}
+                
+                <Link href="/wallet" onClick={() => setMenuOpen(false)}>
                   <Button
-                    variant={pathname === item.href ? "secondary" : "ghost"}
-                    className="w-full justify-start gap-2"
+                    variant={pathname === '/wallet' ? "secondary" : "ghost"}
+                    className="w-full justify-start gap-3 h-14 text-base mobile-text"
                   >
-                    {item.icon && <item.icon className="h-4 w-4" />}
-                    {t(item.translationKey)}
+                    <Wallet className="h-5 w-5" />
+                    {t('wallet')}
                   </Button>
                 </Link>
-              ))}
-              <Link
-                href="/portfolio"
-                className="flex items-center py-2 text-sm font-medium"
-                onClick={() => setMenuOpen(false)}
-              >
-                <Wallet className="mr-2 h-4 w-4" />
-                {t('portfolio')}
-              </Link>
-            </nav>
+              </nav>
+            </div>
+            
+            {isAuthenticated && (
+              <div className="p-4 border-t">
+                <Button 
+                  variant="outline" 
+                  className="w-full h-12 text-base" 
+                  onClick={handleLogout}
+                >
+                  Logout
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       )}

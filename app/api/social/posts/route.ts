@@ -1,28 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
 import { verifyToken } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
 
-// Initialize posts table if it doesn't exist
-if (!global.tables) {
-  global.tables = {};
-}
-
-if (!global.tables.posts) {
-  global.tables.posts = [];
-}
-
-if (!global.tables.post_attachments) {
-  global.tables.post_attachments = [];
-}
-
-if (!global.tables.post_comments) {
-  global.tables.post_comments = [];
-}
-
-// Generate ID helper
-function generateId(): string {
-  return Math.random().toString(36).substring(2, 15) + 
-         Math.random().toString(36).substring(2, 15);
+// Helper function to format post data for response
+function formatPostResponse(post: any, user: any, attachments: any[] = []) {
+  return {
+    ...post,
+    user: {
+      id: user.id,
+      name: user.name,
+      email: user.email
+    },
+    attachments
+  };
 }
 
 export async function POST(request: NextRequest) {
@@ -51,65 +41,53 @@ export async function POST(request: NextRequest) {
     }
 
     // Get user info
-    const userResult = await db.query('SELECT * FROM users WHERE id = $1', [userId]);
-    if (userResult.rows.length === 0) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId }
+    });
+    
+    if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
-    const user = userResult.rows[0];
 
-    // Create post
-    const postId = generateId();
-    const now = new Date().toISOString();
-    
-    const newPost = {
-      id: postId,
-      userId,
-      content: data.content,
-      visibility: data.visibility || 'PUBLIC',
-      tradeSymbol: data.trade?.symbol || null,
-      tradeType: data.trade?.type || null,
-      tradePrice: data.trade?.price || null,
-      analysisType: data.analysis?.type || null,
-      analysisSummary: data.analysis?.summary || null,
-      hashtags: data.hashtags || [],
-      mentions: data.mentions || [],
-      likes: 0,
-      shares: 0,
-      createdAt: now,
-      updatedAt: now
-    };
-
-    // Add post to posts table
-    global.tables.posts.push(newPost);
+    // Create post with Prisma
+    const newPost = await prisma.post.create({
+      data: {
+        userId,
+        content: data.content,
+        visibility: data.visibility || 'PUBLIC',
+        tradeSymbol: data.trade?.symbol,
+        tradeType: data.trade?.type,
+        tradePrice: data.trade?.price,
+        analysisType: data.analysis?.type,
+        analysisSummary: data.analysis?.summary,
+        hashtags: data.hashtags || [],
+        mentions: data.mentions || [],
+        likes: 0,
+        shares: 0
+      },
+    });
 
     // Handle attachments if they exist
-    const attachments = [];
+    let attachments = [];
     if (data.attachments && Array.isArray(data.attachments)) {
-      for (const attachment of data.attachments) {
-        const newAttachment = {
-          id: generateId(),
-          postId,
-          type: attachment.type,
-          url: attachment.url,
-          name: attachment.name,
-          size: attachment.size,
-          createdAt: now
-        };
-        global.tables.post_attachments.push(newAttachment);
-        attachments.push(newAttachment);
-      }
+      const createdAttachments = await Promise.all(
+        data.attachments.map((attachment: any) =>
+          prisma.attachment.create({
+            data: {
+              postId: newPost.id,
+              type: attachment.type,
+              url: attachment.url,
+              name: attachment.name,
+              size: attachment.size,
+            },
+          })
+        )
+      );
+      attachments = createdAttachments;
     }
 
     // Format response
-    const post = {
-      ...newPost,
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email
-      },
-      attachments
-    };
+    const post = formatPostResponse(newPost, user, attachments);
 
     return NextResponse.json({ post }, { status: 201 });
   } catch (error) {
@@ -125,46 +103,40 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '10');
     const skip = (page - 1) * limit;
 
-    // Get all posts
-    const allPosts = global.tables.posts || [];
+    // Get total count for pagination
+    const totalPosts = await prisma.post.count();
     
-    // Sort by createdAt in descending order
-    const sortedPosts = [...allPosts].sort((a, b) => 
-      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
-    
-    // Apply pagination
-    const paginatedPosts = sortedPosts.slice(skip, skip + limit);
-    
-    // Fetch user details and attachments for each post
-    const postsWithDetails = await Promise.all(paginatedPosts.map(async (post) => {
-      // Get user info
-      const userResult = await db.query('SELECT id, name, email FROM users WHERE id = $1', [post.userId]);
-      const user = userResult.rows[0] || { id: post.userId, name: 'Unknown User', email: '' };
-      
-      // Get attachments
-      const attachments = (global.tables.post_attachments || [])
-        .filter(att => att.postId === post.id);
-      
-      // Get comments
-      const comments = (global.tables.post_comments || [])
-        .filter(comment => comment.postId === post.id);
-      
-      return {
-        ...post,
-        user,
-        attachments,
-        comments
-      };
-    }));
+    // Get posts with pagination using Prisma
+    const posts = await prisma.post.findMany({
+      skip,
+      take: limit,
+      orderBy: {
+        createdAt: 'desc'
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        },
+        attachments: true,
+        comments: {
+          include: {
+            parent: true
+          }
+        }
+      }
+    });
 
     return NextResponse.json({
-      posts: postsWithDetails,
+      posts,
       pagination: {
-        total: allPosts.length,
+        total: totalPosts,
         page,
         limit,
-        pages: Math.ceil(allPosts.length / limit),
+        pages: Math.ceil(totalPosts / limit),
       },
     });
   } catch (error) {

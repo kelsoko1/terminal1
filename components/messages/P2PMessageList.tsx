@@ -38,9 +38,9 @@ export function P2PMessageList({ peerId }: P2PMessageListProps) {
   }
 
   return (
-    <Card className="flex flex-col h-[500px] p-4">
+    <Card className="flex flex-col h-[400px] sm:h-[500px] p-4 mobile-card">
       <ScrollArea className="flex-1 pr-4">
-        <div className="space-y-4">
+        <div className="space-y-3 sm:space-y-4">
           {peerMessages.map(message => (
             <div
               key={message.id}
@@ -49,14 +49,14 @@ export function P2PMessageList({ peerId }: P2PMessageListProps) {
               }`}
             >
               <div
-                className={`max-w-[70%] rounded-lg px-4 py-2 ${
+                className={`max-w-[80%] sm:max-w-[70%] rounded-lg px-3 py-2 sm:px-4 sm:py-2 ${
                   message.senderId === user?.id
                     ? 'bg-primary text-primary-foreground'
                     : 'bg-muted'
                 }`}
               >
-                <p>{message.content}</p>
-                <span className="text-xs opacity-70">
+                <p className="mobile-text">{message.content}</p>
+                <span className="text-[10px] sm:text-xs opacity-70">
                   {new Date(message.timestamp).toLocaleTimeString()}
                 </span>
               </div>
@@ -70,8 +70,9 @@ export function P2PMessageList({ peerId }: P2PMessageListProps) {
           onChange={e => setNewMessage(e.target.value)}
           placeholder="Type a message..."
           onKeyPress={e => e.key === 'Enter' && handleSend()}
+          className="h-12 sm:h-10 text-base sm:text-sm"
         />
-        <Button onClick={handleSend} size="icon">
+        <Button onClick={handleSend} size="icon" className="h-12 w-12 sm:h-10 sm:w-10 touch-manipulation">
           <Send className="h-4 w-4" />
         </Button>
       </div>

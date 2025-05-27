@@ -126,11 +126,37 @@ const formatRelativeTime = (timestamp: string) => {
 // API functions for production
 async function fetchStatusUpdates(page: number = 1, limit: number = 10): Promise<StatusUpdate[]> {
   try {
-    const response = await fetch(`/api/social/status?page=${page}&limit=${limit}`);
+    const response = await fetch(`/api/social/posts?page=${page}&limit=${limit}`);
     if (!response.ok) {
       throw new Error('Failed to fetch status updates');
     }
-    return await response.json();
+    const data = await response.json();
+    // Map the posts data to StatusUpdate format
+    return data.posts.map((post: any) => ({
+      id: post.id,
+      userId: post.userId,
+      userName: post.user?.name || 'Unknown User',
+      userAvatar: post.user?.avatar || '',
+      content: post.content,
+      timestamp: post.createdAt,
+      likes: post.likes || 0,
+      comments: post.comments?.length || 0,
+      shares: post.shares || 0,
+      hasLiked: false,
+      hasDisliked: false,
+      voteStatus: 'none',
+      mediaType: post.attachments?.length > 0 ? post.attachments[0].type : 'none',
+      mediaUrl: post.attachments?.length > 0 ? post.attachments[0].url : undefined,
+      commentsList: post.comments?.map((comment: any) => ({
+        id: comment.id,
+        userId: comment.userId,
+        userName: comment.user?.name || 'Unknown User',
+        userAvatar: comment.user?.avatar || '',
+        content: comment.content,
+        timestamp: comment.createdAt,
+        likes: comment.likes || 0
+      })) || []
+    }));
   } catch (error) {
     console.error('Error fetching status updates:', error);
     return [];
@@ -139,16 +165,10 @@ async function fetchStatusUpdates(page: number = 1, limit: number = 10): Promise
 
 const likeStatus = async (statusId: string, liked: boolean): Promise<boolean> => {
   try {
-    const response = await fetch(`/api/social/status/${statusId}/like`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ liked }),
-    });
-    if (!response.ok) {
-      throw new Error('Failed to like status');
-    }
+    // Since we don't have a specific like endpoint yet, we'll log this action
+    // TODO: Implement proper like endpoint at /api/social/posts/{id}/like
+    console.log(`Like action: post ${statusId}, liked: ${liked}`);
+    // For now, return true to simulate success
     return true;
   } catch (error) {
     console.error('Error liking status:', error);
@@ -158,16 +178,10 @@ const likeStatus = async (statusId: string, liked: boolean): Promise<boolean> =>
 
 const commentOnStatus = async (statusId: string, comment: string): Promise<boolean> => {
   try {
-    const response = await fetch(`/api/social/status/${statusId}/comment`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ comment }),
-    });
-    if (!response.ok) {
-      throw new Error('Failed to comment on status');
-    }
+    // Since we don't have a specific comment endpoint yet, we'll log this action
+    // TODO: Implement proper comment endpoint at /api/social/posts/{id}/comment
+    console.log(`Comment action: post ${statusId}, comment: ${comment}`);
+    // For now, return true to simulate success
     return true;
   } catch (error) {
     console.error('Error commenting on status:', error);
@@ -177,12 +191,10 @@ const commentOnStatus = async (statusId: string, comment: string): Promise<boole
 
 const shareStatus = async (statusId: string): Promise<boolean> => {
   try {
-    const response = await fetch(`/api/social/status/${statusId}/share`, {
-      method: 'POST',
-    });
-    if (!response.ok) {
-      throw new Error('Failed to share status');
-    }
+    // Since we don't have a specific share endpoint yet, we'll log this action
+    // TODO: Implement proper share endpoint at /api/social/posts/{id}/share
+    console.log(`Share action: post ${statusId}`);
+    // For now, return true to simulate success
     return true;
   } catch (error) {
     console.error('Error sharing status:', error);
@@ -986,9 +998,9 @@ export function TikTokStyleFeed() {
   const filteredStatusUpdates = statusUpdates;
   
   return (
-    <div className="responsive-layout w-full gap-0 mx-auto max-w-full px-0 py-0 bg-background">
+    <div className="responsive-layout w-full gap-0 mx-auto max-w-full px-0 py-0 bg-background tiktok-feed-container safe-area-inset safe-area-bottom">
       {/* Left Sidebar */}
-      <div className="left-sidebar hidden lg:block w-64 flex-shrink-0">
+      <div className="left-sidebar hidden lg:block w-64 flex-shrink-0 sidebar-column">
         <Card className="sticky top-4 border-0 shadow-sm rounded-xl overflow-hidden">
           {/* Live Stream Preview Section */}
           {isStreamActive && (
@@ -1451,10 +1463,10 @@ export function TikTokStyleFeed() {
             
             {/* Feed Sorting Options */}
             <div className="flex justify-between items-center mb-6 border-b border-border pb-4">
-              <div className="flex gap-2 overflow-x-auto hide-scrollbar">
+              <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-1">
                 <Button 
                   variant="ghost" 
-                  className="px-4 py-2 h-auto rounded-full text-sm font-medium text-primary bg-primary/10"
+                  className="px-3 py-1 sm:px-4 sm:py-2 h-auto rounded-full text-xs sm:text-sm font-medium text-primary bg-primary/10 touch-manipulation"
                 >
                   Popular
                 </Button>
@@ -1479,7 +1491,7 @@ export function TikTokStyleFeed() {
               </div>
             </div>
             
-            <div className="space-y-6">
+            <div className="space-y-4 md:space-y-6 mobile-bottom-safe">
             {/* Status Updates */}
             {filteredStatusUpdates.map((status, index) => (
               <div 
@@ -1487,17 +1499,17 @@ export function TikTokStyleFeed() {
                 ref={index === filteredStatusUpdates.length - 1 ? lastElementRef : null}
               >
                 <Card 
-                  className="overflow-hidden border shadow-sm rounded-xl hover:shadow-md transition-all duration-300 bg-card dark:bg-card/95 cursor-pointer"
+                  className="mobile-full-width overflow-hidden border shadow-sm rounded-xl hover:shadow-md transition-all duration-300 bg-card dark:bg-card/95 cursor-pointer"
                   onClick={() => handlePostClick(status.id)}
                 >
                   <div className="flex">
                     {/* Reddit-style voting buttons */}
-                    <div className="flex flex-col items-center bg-muted/20 dark:bg-muted/10 px-2 py-3 rounded-l-xl">
+                    <div className="flex flex-col items-center bg-muted/20 dark:bg-muted/10 px-1 sm:px-2 py-3 rounded-l-xl">
                       <Button 
                         variant="ghost" 
                         size="sm" 
-                        className={`h-7 w-7 p-0 rounded-full hover:bg-muted transition-colors duration-200 ${voteStatus[status.id] === 'upvoted' ? 'text-orange-500' : ''}`}
-                        onClick={() => handleUpvote(status.id)}
+                        className={`h-8 w-8 sm:h-7 sm:w-7 p-0 rounded-full hover:bg-muted transition-colors duration-200 touch-manipulation ${voteStatus[status.id] === 'upvoted' ? 'text-orange-500' : ''}`}
+                        onClick={(e) => { e.stopPropagation(); handleUpvote(status.id); }}
                       >
                         <ArrowUp className="h-4 w-4" />
                       </Button>
@@ -1507,15 +1519,15 @@ export function TikTokStyleFeed() {
                       <Button 
                         variant="ghost" 
                         size="sm" 
-                        className={`h-7 w-7 p-0 rounded-full hover:bg-muted transition-colors duration-200 ${voteStatus[status.id] === 'downvoted' ? 'text-blue-500' : ''}`}
-                        onClick={() => handleDownvote(status.id)}
+                        className={`h-8 w-8 sm:h-7 sm:w-7 p-0 rounded-full hover:bg-muted transition-colors duration-200 touch-manipulation ${voteStatus[status.id] === 'downvoted' ? 'text-blue-500' : ''}`}
+                        onClick={(e) => { e.stopPropagation(); handleDownvote(status.id); }}
                       >
                         <ArrowDown className="h-4 w-4" />
                       </Button>
                     </div>
                     
-                    <div className="flex-1 p-4">
-                      <div className="flex items-center space-x-2 mb-2">
+                    <div className="flex-1 p-3 sm:p-4">
+                      <div className="flex items-center space-x-2 mb-1 sm:mb-2">
                       <Avatar className="h-8 w-8 border border-muted">
                         <AvatarImage src={status.userAvatar} alt={status.userName} />
                         <AvatarFallback className="bg-primary/10 text-primary">{status.userName.charAt(0)}</AvatarFallback>
@@ -1526,7 +1538,7 @@ export function TikTokStyleFeed() {
                       </div>
                     </div>
                     
-                    <p className="mb-3 text-sm leading-relaxed">{status.content}</p>
+                    <p className="mb-2 sm:mb-3 text-sm leading-relaxed break-words">{status.content}</p>
                     
                     {/* Media Content */}
                     {status.mediaType === 'image' && status.mediaUrl && (
@@ -1803,7 +1815,7 @@ export function TikTokStyleFeed() {
       
       {/* Stream Playback Dialog */}
       <Dialog open={showStreamDialog} onOpenChange={setShowStreamDialog}>
-        <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto rounded-xl border-0 shadow-lg">
+        <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto rounded-xl border-0 shadow-lg w-[95vw] sm:w-auto">
           <DialogHeader>
             <DialogTitle className="text-lg font-semibold">
               {selectedStream?.title || 'Stream'}

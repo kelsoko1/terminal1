@@ -22,6 +22,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no" />
+      </head>
       <body className={inter.className}>
         <Providers>
           <ThemeProvider
@@ -31,9 +34,11 @@ export default function RootLayout({
             disableTransitionOnChange
           >
             <LanguageProvider>
-              <div className="min-h-screen flex flex-col">
-                <Header />
-                <div className="container mx-auto px-4 py-2">
+              <div className="min-h-screen flex flex-col safe-area-inset">
+                <div className="safe-area-top">
+                  <Header />
+                </div>
+                <div className="mobile-container py-2">
                   <ConnectionStatus />
                 </div>
                 <main className="flex-1">{children}</main>

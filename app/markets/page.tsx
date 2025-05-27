@@ -96,13 +96,13 @@ export default function MarketsPage() {
   }, [])
 
   return (
-    <div className="container py-6 max-w-5xl">
-      <div className="mb-6">
+    <div className="py-4 sm:py-6 mobile-container safe-area-inset safe-area-bottom max-w-5xl mx-auto">
+      <div className="mb-4 sm:mb-6">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Search companies, symbols, or keywords"
-            className="pl-10 py-6 text-lg"
+            className="pl-10 py-5 sm:py-6 text-base sm:text-lg"
             value={searchQuery}
             onChange={handleSearch}
           />

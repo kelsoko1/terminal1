@@ -28,19 +28,20 @@ export function UserCard({ userData, onMessage }: UserCardProps) {
   }
 
   return (
-    <Card className="p-4">
+    <Card className="p-4 mobile-card">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="font-medium">{userData.name}</h3>
-          <p className="text-sm opacity-70">{userData.role}</p>
+          <h3 className="font-medium mobile-text">{userData.name}</h3>
+          <p className="text-xs sm:text-sm opacity-70">{userData.role}</p>
           {userData.department && (
-            <p className="text-sm opacity-70">{userData.department}</p>
+            <p className="text-xs sm:text-sm opacity-70">{userData.department}</p>
           )}
         </div>
         <div className="flex gap-2">
           <Button
             variant="outline"
             size="icon"
+            className="h-10 w-10 sm:h-9 sm:w-9 touch-manipulation"
             onClick={() => onMessage(userData.id)}
           >
             <MessageSquare className="h-4 w-4" />
@@ -48,6 +49,7 @@ export function UserCard({ userData, onMessage }: UserCardProps) {
           <Button
             variant={following ? "destructive" : "outline"}
             size="icon"
+            className="h-10 w-10 sm:h-9 sm:w-9 touch-manipulation"
             onClick={handleFollowToggle}
           >
             {following ? (

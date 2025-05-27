@@ -43,18 +43,18 @@ export function ConversationList({ selectedUserId }: ConversationListProps) {
   })
 
   return (
-    <Card className="p-4">
-      <ScrollArea className="h-[500px] pr-4">
+    <Card className="p-4 mobile-card">
+      <ScrollArea className="h-[300px] sm:h-[500px] pr-4">
         <div className="space-y-2">
           {conversations.map(conv => (
-            <Link key={conv.peerId} href={`/messages?user=${conv.peerId}`}>
+            <Link key={conv.peerId} href={`/messages?user=${conv.peerId}`} className="block">
               <Button
                 variant={selectedUserId === conv.peerId ? "secondary" : "ghost"}
-                className="w-full justify-start"
+                className="w-full justify-start h-auto py-3 sm:py-2 touch-manipulation"
               >
                 <div className="flex flex-col items-start">
                   <div className="flex items-center gap-2">
-                    <span className="font-medium">User {conv.peerId}</span>
+                    <span className="font-medium mobile-text">User {conv.peerId}</span>
                     <span className={`w-2 h-2 rounded-full ${
                       conv.status === 'connected' ? 'bg-green-500' : 
                       conv.status === 'connecting' ? 'bg-yellow-500' : 
@@ -62,13 +62,13 @@ export function ConversationList({ selectedUserId }: ConversationListProps) {
                     }`} />
                   </div>
                   {conv.lastMessage && (
-                    <span className="text-sm opacity-70 truncate">
+                    <span className="text-xs sm:text-sm opacity-70 truncate max-w-[200px] sm:max-w-[250px]">
                       {conv.lastMessage.content}
                     </span>
                   )}
                 </div>
                 {conv.unreadCount > 0 && (
-                  <span className="ml-auto bg-primary text-primary-foreground rounded-full px-2 py-1 text-xs">
+                  <span className="ml-auto bg-primary text-primary-foreground rounded-full min-w-[20px] h-[20px] flex items-center justify-center px-1.5 py-0.5 text-xs">
                     {conv.unreadCount}
                   </span>
                 )}

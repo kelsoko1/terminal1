@@ -26,9 +26,9 @@ export function ConnectionStatus() {
   if (isConnected) return null;
 
   return (
-    <Alert variant="destructive" className="my-4 mx-auto w-max">
+    <Alert variant="destructive" className="my-2 sm:my-4 mx-auto w-max mobile-card">
       <AlertCircle className="h-4 w-4" />
-      <AlertDescription className="flex items-center">
+      <AlertDescription className="flex items-center mobile-text">
         <Wifi className="h-4 w-4 mr-2" />
         Connection lost. Attempting to reconnect...
       </AlertDescription>

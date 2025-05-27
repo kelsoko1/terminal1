@@ -124,3 +124,192 @@
 .neutral {
   color: hsl(var(--neutral));
 }
+
+/* Mobile device safe area insets */
+.safe-area-inset-top {
+  padding-top: env(safe-area-inset-top, 0);
+}
+
+.safe-area-inset {
+  padding-top: env(safe-area-inset-top, 0);
+  padding-bottom: env(safe-area-inset-bottom, 0);
+  padding-left: env(safe-area-inset-left, 0);
+  padding-right: env(safe-area-inset-right, 0);
+}
+
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 16px);
+}
+
+/* Touch-friendly elements */
+.touch-manipulation {
+  touch-action: manipulation;
+}
+
+/* Mobile-friendly containers */
+.mobile-container {
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+@media (min-width: 640px) {
+  .mobile-container {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+}
+
+/* Mobile-friendly cards */
+.mobile-card {
+  border-radius: 0;
+  margin-left: -1rem;
+  margin-right: -1rem;
+  width: calc(100% + 2rem);
+}
+
+@media (min-width: 640px) {
+  .mobile-card {
+    border-radius: 0.5rem;
+    margin-left: 0;
+    margin-right: 0;
+    width: 100%;
+  }
+}
+
+/* Mobile-friendly touch targets */
+.mobile-touch-target {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Mobile-friendly spacing */
+.mobile-spacing {
+  padding: 0.75rem;
+}
+
+@media (min-width: 640px) {
+  .mobile-spacing {
+    padding: 1.25rem;
+  }
+}
+
+/* Mobile-friendly text */
+.mobile-text-base {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
+@media (min-width: 640px) {
+  .mobile-text-base {
+    font-size: 1rem;
+    line-height: 1.5rem;
+  }
+}
+
+/* Extra small screens */
+@media (min-width: 320px) {
+  .xs\:inline {
+    display: inline;
+  }
+  .xs\:hidden {
+    display: none;
+  }
+}
+
+/* Mobile-friendly grid layouts */
+.mobile-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+}
+
+@media (min-width: 640px) {
+  .mobile-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .mobile-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.25rem;
+  }
+}
+
+/* Mobile-friendly buttons */
+.mobile-button {
+  height: 2.75rem;
+  font-size: 0.875rem;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+@media (min-width: 640px) {
+  .mobile-button {
+    height: 2.5rem;
+    font-size: 0.875rem;
+  }
+}
+
+/* Mobile container for consistent padding */
+.mobile-container {
+  padding-left: 1rem;
+  padding-right: 1rem;
+  width: 100%;
+  margin: 0 auto;
+}
+
+@media (min-width: 640px) {
+  .mobile-container {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+}
+
+/* Safe area insets for mobile devices */
+.safe-area-inset {
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+.safe-area-top {
+  padding-top: env(safe-area-inset-top);
+}
+
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Mobile-friendly card layouts */
+.mobile-card {
+  border-radius: 0.75rem;
+  overflow: hidden;
+  height: 100%;
+}
+
+/* Mobile-friendly typography */
+.mobile-heading {
+  font-size: 1.25rem;
+  line-height: 1.75rem;
+  font-weight: 600;
+}
+
+@media (min-width: 640px) {
+  .mobile-heading {
+    font-size: 1.5rem;
+    line-height: 2rem;
+  }
+}
+
+.mobile-text {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
+@media (min-width: 640px) {
+  .mobile-text {
+    font-size: 1rem;
+    line-height: 1.5rem;
+  }
+}

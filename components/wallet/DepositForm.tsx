@@ -251,21 +251,21 @@ export default function DepositForm() {
   }
 
   return (
-    <div className="grid gap-6">
-      <Card className="p-6">
+    <div className="grid gap-4 sm:gap-6">
+      <Card className="p-4 sm:p-6 mobile-card">
         {transactionId && (
           <div className="mb-4 p-4 bg-muted rounded-lg">
-            <h4 className="font-semibold">Transaction In Progress</h4>
-            <p className="text-sm text-muted-foreground">
+            <h4 className="mobile-heading">Transaction In Progress</h4>
+            <p className="mobile-text text-muted-foreground">
               Transaction ID: {transactionId}
             </p>
-            <p className="text-sm text-muted-foreground">
+            <p className="mobile-text text-muted-foreground">
               Please confirm the payment on your phone
             </p>
             {azamPesaRedirectUrl && (
               <Button 
                 variant="outline" 
-                className="mt-2" 
+                className="mt-3 w-full sm:w-auto h-12 mobile-button" 
                 onClick={handleAzamPesaRedirect}
               >
                 Complete Payment on Azam Pesa
@@ -275,16 +275,16 @@ export default function DepositForm() {
         )}
 
         <Tabs defaultValue="mobile-money" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="mobile-money">Mobile Money</TabsTrigger>
-            <TabsTrigger value="card">Credit Card</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-2 h-12 sm:h-10">
+            <TabsTrigger value="mobile-money" className="text-base sm:text-sm">Mobile Money</TabsTrigger>
+            <TabsTrigger value="card" className="text-base sm:text-sm">Credit Card</TabsTrigger>
           </TabsList>
 
           <TabsContent value="mobile-money" className="space-y-4">
             <div className="space-y-2">
-              <Label>Mobile Money Provider</Label>
+              <Label className="mobile-text">Mobile Money Provider</Label>
               <Select value={provider} onValueChange={setProvider}>
-                <SelectTrigger>
+                <SelectTrigger className="h-12 sm:h-10 text-base sm:text-sm">
                   <SelectValue placeholder="Select provider" />
                 </SelectTrigger>
                 <SelectContent>
@@ -297,41 +297,44 @@ export default function DepositForm() {
             </div>
 
             <div className="space-y-2">
-              <Label>Mobile Number</Label>
+              <Label className="mobile-text">Mobile Number</Label>
               <Input
                 placeholder="Enter mobile number"
                 value={mobileNumber}
                 onChange={(e) => setMobileNumber(e.target.value)}
+                className="h-12 sm:h-10 text-base sm:text-sm"
               />
             </div>
 
             {provider === 'azampesa' && (
               <div className="space-y-2">
-                <Label>Email (Optional)</Label>
+                <Label className="mobile-text">Email (Optional)</Label>
                 <Input
                   type="email"
                   placeholder="Enter email for receipt"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  className="h-12 sm:h-10 text-base sm:text-sm"
                 />
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-muted-foreground mobile-text">
                   Your email will be used to send payment confirmation
                 </p>
               </div>
             )}
 
             <div className="space-y-2">
-              <Label>Amount (USD)</Label>
+              <Label className="mobile-text">Amount (TZS)</Label>
               <Input
                 type="number"
                 placeholder="Enter amount"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
+                className="h-12 sm:h-10 text-base sm:text-sm"
               />
             </div>
 
             <Button 
-              className="w-full" 
+              className="w-full h-12 sm:h-10 mobile-button" 
               onClick={handleMobileMoneyDeposit}
               disabled={isProcessing}
             >
@@ -341,44 +344,50 @@ export default function DepositForm() {
 
           <TabsContent value="card" className="space-y-4">
             <div className="space-y-2">
-              <Label>Card Number</Label>
+              <Label className="mobile-text">Card Number</Label>
               <Input
                 placeholder="1234 5678 9012 3456"
                 value={cardNumber}
                 onChange={(e) => setCardNumber(e.target.value)}
+                className="h-12 sm:h-10 text-base sm:text-sm"
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-3 sm:gap-4">
               <div className="space-y-2">
-                <Label>Expiry Date</Label>
+                <Label className="mobile-text">Expiry Date</Label>
                 <Input
                   placeholder="MM/YY"
                   value={expiryDate}
                   onChange={(e) => setExpiryDate(e.target.value)}
+                  className="h-12 sm:h-10 text-base sm:text-sm"
                 />
               </div>
               <div className="space-y-2">
-                <Label>CVV</Label>
+                <Label className="mobile-text">CVV</Label>
                 <Input
                   placeholder="123"
                   value={cvv}
                   onChange={(e) => setCvv(e.target.value)}
+                  className="h-12 sm:h-10 text-base sm:text-sm"
                 />
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label>Amount (USD)</Label>
+              <Label className="mobile-text">Amount (TZS)</Label>
               <Input
                 type="number"
                 placeholder="Enter amount"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
+                className="h-12 sm:h-10 text-base sm:text-sm"
               />
             </div>
 
-            <Button className="w-full">Deposit via Card</Button>
+            <Button className="w-full h-12 sm:h-10 mobile-button" disabled={isProcessing}>
+              {isProcessing ? "Processing..." : "Pay with Card"}
+            </Button>
           </TabsContent>
         </Tabs>
       </Card>
