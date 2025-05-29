@@ -1,0 +1,108 @@
+/* Mobile Responsive CSS for Trading Page */
+
+/* Hide top navigation bar in mobile view */
+@media screen and (max-width: 768px) {
+  header.sticky {
+    display: none;
+  }
+}
+
+/* Base mobile styles */
+@media screen and (max-width: 768px) {
+  .trading-container {
+    padding: 10px;
+    flex-direction: column;
+  }
+  
+  .trading-header {
+    flex-direction: column;
+    align-items: flex-start;
+    margin-bottom: 15px;
+  }
+  
+  .trading-title {
+    font-size: 1.5rem;
+    margin-bottom: 10px;
+  }
+  
+  .trading-layout {
+    flex-direction: column;
+  }
+  
+  .chart-section {
+    width: 100%;
+    height: 300px;
+    margin-bottom: 15px;
+  }
+  
+  .trading-sidebar {
+    width: 100%;
+  }
+  
+  .order-form {
+    padding: 12px;
+  }
+  
+  .order-tabs {
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+  
+  .order-tab {
+    padding: 8px 12px;
+    font-size: 0.9rem;
+  }
+  
+  .order-type-selector {
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .order-book {
+    max-height: 250px;
+  }
+  
+  .trade-history {
+    max-height: 250px;
+  }
+  
+  .trading-indicators {
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+  
+  .indicator-button {
+    padding: 6px 10px;
+    font-size: 0.8rem;
+  }
+}
+
+/* Small mobile devices */
+@media screen and (max-width: 480px) {
+  .trading-title {
+    font-size: 1.2rem;
+  }
+  
+  .chart-section {
+    height: 250px;
+  }
+  
+  .order-form {
+    padding: 10px;
+  }
+  
+  .order-tab {
+    padding: 6px 10px;
+    font-size: 0.8rem;
+  }
+  
+  .order-input {
+    font-size: 0.9rem;
+    padding: 8px;
+  }
+  
+  .order-button {
+    padding: 8px 0;
+    font-size: 0.9rem;
+  }
+}

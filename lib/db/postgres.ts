@@ -19,11 +19,11 @@ import { Pool } from 'pg';
 
 // Create a connection pool to the PostgreSQL database
 const pool = new Pool({
-  user: process.env.POSTGRES_USER || 'webtrader',
-  password: process.env.POSTGRES_PASSWORD || 'webtrader_secret',
+  user: process.env.POSTGRES_USER || 'kelsoko',
+  password: process.env.POSTGRES_PASSWORD || 'kelsoko_secret',
   host: process.env.POSTGRES_HOST || 'localhost',
   port: parseInt(process.env.POSTGRES_PORT || '5432'),
-  database: process.env.POSTGRES_DB || 'webtrader',
+  database: process.env.POSTGRES_DB || 'terminaldb',
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
 });
 

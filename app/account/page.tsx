@@ -260,46 +260,97 @@ export default function AccountPage() {
     }
   }, [selectedChat, chatMessages]);
 
-  // Simulate loading contacts from API
+  // Load conversations from API
   useEffect(() => {
-    const loadContacts = async () => {
+    const loadConversations = async () => {
       try {
         setIsLoadingContacts(true);
         setError(null);
-        // In production, this would be an API call
-        // await fetch('/api/contacts')
-        await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API delay
-        // setContacts(data);
+        
+        const response = await fetch('/api/messages/conversations');
+        
+        if (!response.ok) {
+          throw new Error('Failed to load conversations');
+        }
+        
+        const data = await response.json();
+        
+        // Transform API response to match our UI format
+        const formattedContacts = data.map((conv: any) => ({
+          id: conv.otherUser.id,
+          name: conv.otherUser.name,
+          avatar: conv.otherUser.image || '/placeholder-avatar.jpg',
+          status: 'offline', // We could enhance this with online status in the future
+          lastMessage: conv.lastMessage.content,
+          lastMessageTime: formatMessageTime(new Date(conv.lastMessage.timestamp)),
+          unread: conv.unreadCount
+        }));
+        
+        setContacts(formattedContacts);
         setIsLoadingContacts(false);
       } catch (err) {
-        setError('Failed to load contacts. Please try again later.');
+        console.error('Error loading conversations:', err);
+        setError('Failed to load conversations. Please try again later.');
         setIsLoadingContacts(false);
       }
     };
     
-    loadContacts();
+    loadConversations();
   }, []);
+  
+  // Helper function to format message timestamps
+  const formatMessageTime = (date: Date) => {
+    const now = new Date();
+    const diffInDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+    
+    if (diffInDays === 0) {
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } else if (diffInDays === 1) {
+      return 'Yesterday';
+    } else if (diffInDays < 7) {
+      return date.toLocaleDateString([], { weekday: 'long' });
+    } else {
+      return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    }
+  };
 
-  // Simulate loading messages when chat is selected
+  // Load messages when chat is selected
   useEffect(() => {
     if (selectedChat) {
       const loadMessages = async () => {
         try {
           setIsLoadingMessages(true);
           setError(null);
-          // In production, this would be an API call
-          // await fetch(`/api/messages/${selectedChat}`)
-          await new Promise(resolve => setTimeout(resolve, 800)); // Simulate API delay
-          // setChatMessages({...chatMessages, [selectedChat]: data});
+          
+          const response = await fetch(`/api/messages/conversation?otherUserId=${selectedChat}`);
+          
+          if (!response.ok) {
+            throw new Error('Failed to load messages');
+          }
+          
+          const data = await response.json();
+          
+          // Transform API response to match our UI format
+          const formattedMessages = data.map((msg: any) => ({
+            id: msg.id,
+            sender: msg.senderId === selectedChat ? contacts.find(c => c.id === selectedChat)?.name || 'User' : 'me',
+            content: msg.content,
+            time: formatMessageTime(new Date(msg.createdAt)),
+            isMine: msg.senderId !== selectedChat,
+            status: msg.read ? 'read' : 'delivered'
+          }));
+          
+          setChatMessages({...chatMessages, [selectedChat]: formattedMessages});
           setIsLoadingMessages(false);
           
-          // Mark messages as read
+          // Mark messages as read in UI
           setContacts(contacts.map(contact => 
             contact.id === selectedChat 
               ? {...contact, unread: 0}
               : contact
           ));
         } catch (err) {
+          console.error('Error loading messages:', err);
           setError('Failed to load messages. Please try again later.');
           setIsLoadingMessages(false);
         }
@@ -307,7 +358,7 @@ export default function AccountPage() {
       
       loadMessages();
     }
-  }, [selectedChat]);
+  }, [selectedChat, contacts]);
 
   const handleSaveProfile = (e: React.FormEvent) => {
     e.preventDefault()
@@ -351,8 +402,9 @@ export default function AccountPage() {
   const handleSendMessage = async () => {
     if (!messageInput.trim() || !selectedChat) return;
     
+    const tempId = `temp-${Date.now()}`;
     const newMessage: ChatMessage = {
-      id: `${selectedChat}-${Date.now()}`,
+      id: tempId,
       sender: 'me',
       content: messageInput,
       time: 'Just now',
@@ -376,16 +428,35 @@ export default function AccountPage() {
     setMessageInput('');
     
     try {
-      // In production, this would be an API call
-      // await fetch('/api/messages', { method: 'POST', body: JSON.stringify({ chatId: selectedChat, message: messageInput }) })
-      await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API delay
+      // Send message to API
+      const response = await fetch('/api/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ 
+          receiverId: selectedChat, 
+          content: messageInput 
+        })
+      });
       
-      // Update message status to sent
+      if (!response.ok) {
+        throw new Error('Failed to send message');
+      }
+      
+      const sentMessage = await response.json();
+      
+      // Update message status to sent with actual message ID from server
       setChatMessages(prev => ({
         ...prev,
         [selectedChat]: prev[selectedChat].map((msg: ChatMessage) => 
-          msg.id === newMessage.id 
-            ? {...msg, status: 'sent'} 
+          msg.id === tempId 
+            ? {
+                ...msg, 
+                id: sentMessage.id,
+                status: 'sent',
+                time: formatMessageTime(new Date(sentMessage.createdAt))
+              } 
             : msg
         )
       }));
@@ -395,19 +466,19 @@ export default function AccountPage() {
         setChatMessages(prev => ({
           ...prev,
           [selectedChat]: prev[selectedChat].map((msg: ChatMessage) => 
-            msg.id === newMessage.id 
+            msg.id === sentMessage.id 
               ? {...msg, status: 'delivered'} 
               : msg
           )
         }));
       }, 1000);
       
-      // Simulate message being read after a delay
+      // Simulate message being read after a delay (in a real app, this would be triggered by the recipient)
       setTimeout(() => {
         setChatMessages(prev => ({
           ...prev,
           [selectedChat]: prev[selectedChat].map((msg: ChatMessage) => 
-            msg.id === newMessage.id 
+            msg.id === sentMessage.id 
               ? {...msg, status: 'read'} 
               : msg
           )
@@ -415,11 +486,12 @@ export default function AccountPage() {
       }, 2000);
       
     } catch (err) {
+      console.error('Error sending message:', err);
       // Handle error
       setChatMessages(prev => ({
         ...prev,
         [selectedChat]: prev[selectedChat].map((msg: ChatMessage) => 
-          msg.id === newMessage.id 
+          msg.id === tempId 
             ? {...msg, status: 'failed'} 
             : msg
         )
@@ -446,9 +518,14 @@ export default function AccountPage() {
   };
 
   // Handle retry for failed messages
-  const handleRetryMessage = (messageId: string) => {
+  const handleRetryMessage = async (messageId: string) => {
     if (!selectedChat) return;
     
+    // Find the failed message
+    const failedMessage = chatMessages[selectedChat]?.find(msg => msg.id === messageId);
+    if (!failedMessage) return;
+    
+    // Update status to sending
     setChatMessages(prev => ({
       ...prev,
       [selectedChat]: prev[selectedChat].map((msg: ChatMessage) => 
@@ -458,28 +535,65 @@ export default function AccountPage() {
       )
     }));
     
-    // Simulate retry
-    setTimeout(() => {
+    try {
+      // Retry sending the message
+      const response = await fetch('/api/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ 
+          receiverId: selectedChat, 
+          content: failedMessage.content 
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to send message');
+      }
+      
+      const sentMessage = await response.json();
+      
+      // Update message with new ID and status
       setChatMessages(prev => ({
         ...prev,
         [selectedChat]: prev[selectedChat].map((msg: ChatMessage) => 
           msg.id === messageId 
-            ? {...msg, status: 'sent'} 
+            ? {
+                ...msg, 
+                id: sentMessage.id,
+                status: 'sent',
+                time: formatMessageTime(new Date(sentMessage.createdAt))
+              } 
             : msg
         )
       }));
       
+      // Simulate message being delivered after a delay
       setTimeout(() => {
         setChatMessages(prev => ({
           ...prev,
           [selectedChat]: prev[selectedChat].map((msg: ChatMessage) => 
-            msg.id === messageId 
+            msg.id === sentMessage.id 
               ? {...msg, status: 'delivered'} 
               : msg
           )
         }));
       }, 1000);
-    }, 1000);
+    } catch (err) {
+      console.error('Error retrying message:', err);
+      // Set back to failed status
+      setChatMessages(prev => ({
+        ...prev,
+        [selectedChat]: prev[selectedChat].map((msg: ChatMessage) => 
+          msg.id === messageId 
+            ? {...msg, status: 'failed'} 
+            : msg
+        )
+      }));
+      
+      setError('Failed to send message. Please try again.');
+    }
   };
 
   // Component for rendering a single post
@@ -883,7 +997,34 @@ export default function AccountPage() {
                 </div>
                 
                 <div className="p-3 border-t border-border bg-secondary">
-                  <Button className="w-full gap-2 bg-primary text-primary-foreground hover:bg-primary/90">
+                  <Button 
+                    className="w-full gap-2 bg-primary text-primary-foreground hover:bg-primary/90"
+                    onClick={() => {
+                      // In a production app, this would open a dialog to select a user
+                      // For now, we'll just refresh the conversation list
+                      setIsLoadingContacts(true);
+                      fetch('/api/messages/conversations')
+                        .then(res => res.json())
+                        .then(data => {
+                          const formattedContacts = data.map((conv: any) => ({
+                            id: conv.otherUser.id,
+                            name: conv.otherUser.name,
+                            avatar: conv.otherUser.image || '/placeholder-avatar.jpg',
+                            status: 'offline',
+                            lastMessage: conv.lastMessage.content,
+                            lastMessageTime: formatMessageTime(new Date(conv.lastMessage.timestamp)),
+                            unread: conv.unreadCount
+                          }));
+                          setContacts(formattedContacts);
+                          setIsLoadingContacts(false);
+                        })
+                        .catch(err => {
+                          console.error('Error refreshing conversations:', err);
+                          setError('Failed to refresh conversations');
+                          setIsLoadingContacts(false);
+                        });
+                    }}
+                  >
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                     </svg>

@@ -55,15 +55,26 @@ export function Header() {
       <div className="mobile-container flex h-14 sm:h-16 items-center justify-between">
         {/* Left Section */}
         <div className="flex items-center gap-4">
+          {isAuthenticated && (
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => setMenuOpen(true)}
+              className="lg:hidden touch-manipulation"
+              aria-label="Open menu"
+            >
+              <Menu className="h-6 w-6" />
+            </Button>
+          )}
           
           <Link href="/" className="flex items-center gap-2">
             <BarChart2 className="h-6 w-6 text-primary" />
-            <span className="text-lg font-bold hidden sm:inline-block">Terminal</span>
+            <span className="text-lg font-bold hidden sm:inline-block">Kelsoko Terminal</span>
           </Link>
 
           <LanguageSwitcher />
 
-          {/* Desktop Navigation - Hidden on mobile */}
+          {/* Desktop Navigation */}
           {isAuthenticated && (
             <nav className="hidden lg:flex items-center gap-1">
               {navigation.map((item) => {
@@ -152,7 +163,7 @@ export function Header() {
             <div className="flex items-center justify-between p-4 border-b safe-area-top">
               <div className="flex items-center gap-2">
                 <BarChart2 className="h-6 w-6 text-primary" />
-                <span className="text-lg font-bold">Terminal</span>
+                <span className="text-lg font-bold">Kelsoko Terminal</span>
               </div>
               <Button
                 variant="ghost"

@@ -2,7 +2,6 @@ import './globals.css';
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import { Header } from '@/components/Header';
-import { MobileNavigation } from '@/components/MobileNavigation';
 import { Toaster } from '@/components/ui/toaster';
 import { ThemeProvider } from 'next-themes';
 import { Providers } from './providers';
@@ -12,7 +11,7 @@ import { ConnectionStatus } from '@/components/ConnectionStatus';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'WebTrader',
+  title: 'Kelsoko Terminal',
   description: 'Trading platform for stocks, bonds and mutual funds',
 };
 
@@ -42,8 +41,7 @@ export default function RootLayout({
                 <div className="mobile-container py-2">
                   <ConnectionStatus />
                 </div>
-                <main className="flex-1 pb-16 sm:pb-0">{children}</main>
-                <MobileNavigation />
+                <main className="flex-1">{children}</main>
                 <Toaster />
               </div>
             </LanguageProvider>

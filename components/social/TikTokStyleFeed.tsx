@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import './TikTokStyleFeed.css'
 import { Card } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -252,40 +252,131 @@ async function voteOnPost(postId: string, voteType: 'upvote' | 'downvote' | 'non
   }
 }
 
+// Stream API functions
+async function fetchStreams(page: number = 1, limit: number = 10, isLive?: boolean): Promise<LiveStream[]> {
+  try {
+    let url = `/api/social/streams?page=${page}&limit=${limit}`;
+    if (isLive !== undefined) {
+      url += `&isLive=${isLive}`;
+    }
+    
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error('Failed to fetch streams');
+    }
+    
+    const data = await response.json();
+    // Map the streams data to LiveStream format
+    return data.streams.map((stream: any) => ({
+      id: stream.id,
+      userId: stream.userId,
+      userName: stream.user?.name || 'Unknown User',
+      userAvatar: stream.user?.image || '/placeholder-avatar.jpg',
+      title: stream.title,
+      viewers: stream.viewers || 0,
+      isLive: stream.isLive,
+      startTime: stream.startTime,
+      mediaType: stream.mediaType.toLowerCase() as 'video' | 'audio',
+      mediaUrl: stream.mediaUrl,
+      duration: stream.duration
+    }));
+  } catch (error) {
+    console.error('Error fetching streams:', error);
+    return [];
+  }
+}
+
+async function createStream(title: string, mediaType: 'VIDEO' | 'AUDIO', mediaUrl?: string): Promise<LiveStream | null> {
+  try {
+    const response = await fetch('/api/social/streams', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}` // Assuming token is stored in localStorage
+      },
+      body: JSON.stringify({ title, mediaType, mediaUrl })
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to create stream');
+    }
+    
+    const data = await response.json();
+    return {
+      id: data.stream.id,
+      userId: data.stream.userId,
+      userName: data.stream.user.name,
+      userAvatar: data.stream.user.image || '/placeholder-avatar.jpg',
+      title: data.stream.title,
+      viewers: data.stream.viewers || 0,
+      isLive: data.stream.isLive,
+      startTime: data.stream.startTime,
+      mediaType: data.stream.mediaType.toLowerCase() as 'video' | 'audio',
+      mediaUrl: data.stream.mediaUrl
+    };
+  } catch (error) {
+    console.error('Error creating stream:', error);
+    return null;
+  }
+}
+
+async function updateStream(id: string, data: { isLive?: boolean, viewers?: number, mediaUrl?: string, duration?: number, title?: string }): Promise<LiveStream | null> {
+  try {
+    const response = await fetch('/api/social/streams', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}` // Assuming token is stored in localStorage
+      },
+      body: JSON.stringify({ id, ...data })
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to update stream');
+    }
+    
+    const responseData = await response.json();
+    return {
+      id: responseData.stream.id,
+      userId: responseData.stream.userId,
+      userName: responseData.stream.user.name,
+      userAvatar: responseData.stream.user.image || '/placeholder-avatar.jpg',
+      title: responseData.stream.title,
+      viewers: responseData.stream.viewers || 0,
+      isLive: responseData.stream.isLive,
+      startTime: responseData.stream.startTime,
+      mediaType: responseData.stream.mediaType.toLowerCase() as 'video' | 'audio',
+      mediaUrl: responseData.stream.mediaUrl,
+      duration: responseData.stream.duration
+    };
+  } catch (error) {
+    console.error('Error updating stream:', error);
+    return null;
+  }
+}
+
 // Fetch comments for a post
 async function fetchComments(postId: string): Promise<Comment[]> {
   try {
-    // In a real app, this would call an API endpoint
-    // For now, we'll return mock data
-    return [
-      {
-        id: `comment-1-${postId}`,
-        userId: 'user-123',
-        userName: 'User123',
-        userAvatar: '/placeholder-avatar.jpg',
-        content: 'This is a great post! Thanks for sharing.',
-        timestamp: new Date(Date.now() - 7200000).toISOString(), // 2 hours ago
-        likes: 5
-      },
-      {
-        id: `comment-2-${postId}`,
-        userId: 'user-456',
-        userName: 'AnotherUser',
-        userAvatar: '/placeholder-avatar.jpg',
-        content: 'I have a question about this. Can you elaborate more?',
-        timestamp: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
-        likes: 2
-      },
-      {
-        id: `comment-3-${postId}`,
-        userId: 'user-789',
-        userName: 'ThirdUser',
-        userAvatar: '/placeholder-avatar.jpg',
-        content: 'I disagree with some points, but overall it\'s a good perspective.',
-        timestamp: new Date(Date.now() - 172800000).toISOString(), // 2 days ago
-        likes: 1
-      }
-    ];
+    // Call the API endpoint to fetch comments for the post
+    const response = await fetch(`/api/social/posts/${postId}/comments`);
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch comments: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    
+    // Map the API response to our Comment interface
+    return data.comments.map((comment: any) => ({
+      id: comment.id,
+      userId: comment.userId,
+      userName: comment.user?.name || 'Unknown User',
+      userAvatar: comment.user?.avatar || '/placeholder-avatar.jpg',
+      content: comment.content,
+      timestamp: comment.createdAt,
+      likes: comment.likes || 0
+    }));
   } catch (error) {
     console.error('Error fetching comments:', error);
     return [];
@@ -342,26 +433,42 @@ export function TikTokStyleFeed() {
         await startStream({ video: false, audio: true });
       }
       
-      // Create a new stream object for the left column
-      const newStream: LiveStream = {
-        id: uuidv4(),
-        userId: 'current-user-id',
-        userName: 'Current User',
-        userAvatar: '/placeholder-avatar.jpg',
-        title: streamTitle || `${type === 'video' ? 'Video' : 'Audio'} Stream`,
-        viewers: 0,
-        isLive: true,
-        startTime: new Date().toISOString(),
-        mediaType: type
-      };
+      // Create a new stream in the database via API
+      const mediaType = type === 'video' ? 'VIDEO' : 'AUDIO';
+      const title = streamTitle || `${type === 'video' ? 'Video' : 'Audio'} Stream`;
       
-      setActiveStream(newStream);
-      setLiveStreams(prev => [newStream, ...prev]);
+      const newStream = await createStream(title, mediaType);
       
-      toast({
-        title: 'Stream Started',
-        description: `Your ${type} stream has started successfully`,
-      });
+      if (newStream) {
+        setActiveStream(newStream);
+        setLiveStreams(prev => [newStream, ...prev]);
+        
+        toast({
+          title: 'Stream Started',
+          description: `Your ${type} stream has started successfully`,
+        });
+      } else {
+        // If API call fails, create a local stream object as fallback
+        const fallbackStream: LiveStream = {
+          id: uuidv4(),
+          userId: 'current-user-id',
+          userName: 'Current User',
+          userAvatar: '/placeholder-avatar.jpg',
+          title: title,
+          viewers: 0,
+          isLive: true,
+          startTime: new Date().toISOString(),
+          mediaType: type
+        };
+        
+        setActiveStream(fallbackStream);
+        setLiveStreams(prev => [fallbackStream, ...prev]);
+        
+        toast({
+          title: 'Stream Started (Offline Mode)',
+          description: `Your ${type} stream has started in offline mode`,
+        });
+      }
     } catch (error) {
       console.error('Error starting stream:', error);
       toast({
@@ -373,7 +480,7 @@ export function TikTokStyleFeed() {
   };
   
   // Handle stopping a stream
-  const handleStopStream = () => {
+  const handleStopStream = async () => {
     stopStream();
     setStreamType(null);
     setShowStreamPreview(false);
@@ -391,20 +498,57 @@ export function TikTokStyleFeed() {
       const endTime = new Date().getTime();
       const durationInSeconds = Math.floor((endTime - startTime) / 1000);
       
-      const updatedStream = { 
-        ...activeStream, 
-        isLive: false,
-        mediaUrl,
-        duration: durationInSeconds
-      };
-      setActiveStream(null);
+      try {
+        // Update the stream in the database via API
+        const updatedStream = await updateStream(activeStream.id, {
+          isLive: false,
+          mediaUrl,
+          duration: durationInSeconds
+        });
+        
+        if (updatedStream) {
+          // Update the stream in the list with the response from the API
+          setLiveStreams(prev => 
+            prev.map(stream => 
+              stream.id === updatedStream.id ? updatedStream : stream
+            )
+          );
+        } else {
+          // Fallback to local update if API call fails
+          const localUpdatedStream = { 
+            ...activeStream, 
+            isLive: false,
+            mediaUrl,
+            duration: durationInSeconds
+          };
+          
+          // Update the stream in the list
+          setLiveStreams(prev => 
+            prev.map(stream => 
+              stream.id === localUpdatedStream.id ? localUpdatedStream : stream
+            )
+          );
+        }
+      } catch (error) {
+        console.error('Error updating stream:', error);
+        
+        // Fallback to local update if API call fails
+        const localUpdatedStream = { 
+          ...activeStream, 
+          isLive: false,
+          mediaUrl,
+          duration: durationInSeconds
+        };
+        
+        // Update the stream in the list
+        setLiveStreams(prev => 
+          prev.map(stream => 
+            stream.id === localUpdatedStream.id ? localUpdatedStream : stream
+          )
+        );
+      }
       
-      // Update the stream in the list
-      setLiveStreams(prev => 
-        prev.map(stream => 
-          stream.id === updatedStream.id ? updatedStream : stream
-        )
-      );
+      setActiveStream(null);
     }
     
     toast({
@@ -481,52 +625,26 @@ export function TikTokStyleFeed() {
   const observerRef = useRef<IntersectionObserver | null>(null)
   const lastElementRef = useRef<HTMLDivElement | null>(null)
   
-  // Initialize with some mock streams for demo purposes
+  // Fetch streams from the API on component mount
   useEffect(() => {
-    // Only add mock data if there are no streams yet
-    if (liveStreams.length === 0) {
-      const mockStreams: LiveStream[] = [
-        {
-          id: uuidv4(),
-          userId: 'user-1',
-          userName: 'John Doe',
-          userAvatar: '/placeholder-avatar.jpg',
-          title: 'Market Analysis Live',
-          viewers: 124,
-          isLive: true,
-          startTime: new Date(Date.now() - 15 * 60 * 1000).toISOString(), // Started 15 mins ago
-          mediaType: 'video'
-        },
-        {
-          id: uuidv4(),
-          userId: 'user-2',
-          userName: 'Jane Smith',
-          userAvatar: '/placeholder-avatar.jpg',
-          title: 'Financial Tips',
-          viewers: 0,
-          isLive: false,
-          startTime: new Date(Date.now() - 120 * 60 * 1000).toISOString(), // Started 2 hours ago
-          mediaType: 'audio',
-          mediaUrl: '/placeholder-audio.mp3',
-          duration: 1845 // 30:45
-        },
-        {
-          id: uuidv4(),
-          userId: 'user-3',
-          userName: 'Robert Johnson',
-          userAvatar: '/placeholder-avatar.jpg',
-          title: 'Stock Market Review',
-          viewers: 0,
-          isLive: false,
-          startTime: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), // Started 1 day ago
-          mediaType: 'video',
-          mediaUrl: '/placeholder-video.mp4',
-          duration: 3600 // 1:00:00
+    const loadStreams = async () => {
+      try {
+        // Fetch both live and recorded streams
+        const streams = await fetchStreams(1, 10);
+        if (streams.length > 0) {
+          setLiveStreams(streams);
         }
-      ];
-      
-      setLiveStreams(mockStreams);
-    }
+      } catch (error) {
+        console.error('Error loading streams:', error);
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: 'Failed to load streams. Please try again later.',
+        });
+      }
+    };
+    
+    loadStreams();
   }, []);
   
   // Auto-update timer
@@ -994,13 +1112,24 @@ export function TikTokStyleFeed() {
     loadInitialData();
   }, [toast]);
   
-  // No filtering needed since we removed tabs
-  const filteredStatusUpdates = statusUpdates;
+  // Filter content based on selected content type
+  const [contentType, setContentType] = useState<'feeds' | 'video' | 'audio'>('feeds');
+  
+  const filteredStatusUpdates = useMemo(() => {
+    if (contentType === 'feeds') {
+      return statusUpdates;
+    } else if (contentType === 'video') {
+      return statusUpdates.filter(status => status.mediaType === 'video');
+    } else if (contentType === 'audio') {
+      return statusUpdates.filter(status => status.mediaType === 'audio');
+    }
+    return statusUpdates;
+  }, [statusUpdates, contentType]);
   
   return (
     <div className="responsive-layout w-full gap-0 mx-auto max-w-full px-0 py-0 bg-background tiktok-feed-container safe-area-inset safe-area-bottom">
       {/* Left Sidebar */}
-      <div className="left-sidebar hidden lg:block w-64 flex-shrink-0 sidebar-column">
+      <div className="left-sidebar hidden lg:block w-72 flex-shrink-0 sidebar-column">
         <Card className="sticky top-4 border-0 shadow-sm rounded-xl overflow-hidden">
           {/* Live Stream Preview Section */}
           {isStreamActive && (
@@ -1095,24 +1224,11 @@ export function TikTokStyleFeed() {
                         </div>
                       ) : streamType === 'audio' ? (
                         <div className="aspect-[9/16] bg-gradient-to-b from-primary/10 to-background relative p-4 flex flex-col justify-between">
-                          <div className="absolute top-2 right-2">
-                            <Button 
-                              size="sm" 
-                              variant="destructive" 
-                              className="h-7 w-7 p-0 rounded-full"
-                              onClick={handleStopStream}
-                            >
-                              <StopCircle className="h-4 w-4" />
-                            </Button>
-                          </div>
-                          
                           <div className="flex-1 flex items-center justify-center">
                             <div className="h-20 w-20 rounded-full bg-primary/20 flex items-center justify-center">
                               <Mic className="h-10 w-10 text-primary" />
                             </div>
                           </div>
-                          
-                          <audio ref={audioRef} className="hidden" autoPlay />
                           
                           <div className="mt-4">
                             <div className="flex items-center gap-2">
@@ -1255,7 +1371,7 @@ export function TikTokStyleFeed() {
       </div>
       
       {/* Center Feed Area */}
-      <div className="main-column flex-1 min-w-0 w-full max-w-full mx-auto md:mx-0">
+      <div className="main-column flex-1 min-w-0 w-full max-w-3xl mx-auto md:mx-0">
         <Card className="border-0 shadow-md rounded-lg bg-card dark:bg-card/90 backdrop-blur-sm overflow-hidden h-full">
           <div className="p-6">
             {/* Create Post Button */}
@@ -1461,37 +1577,67 @@ export function TikTokStyleFeed() {
               </Dialog>
             </div>
             
-            {/* Feed Sorting Options */}
+            {/* Content Type Filtering */}
             <div className="flex justify-between items-center mb-6 border-b border-border pb-4">
               <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-1">
                 <Button 
                   variant="ghost" 
-                  className="px-3 py-1 sm:px-4 sm:py-2 h-auto rounded-full text-xs sm:text-sm font-medium text-primary bg-primary/10 touch-manipulation"
+                  className={`px-3 py-1 sm:px-4 sm:py-2 h-auto rounded-full text-xs sm:text-sm font-medium ${contentType === 'feeds' ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:bg-muted'} touch-manipulation`}
+                  onClick={() => setContentType('feeds')}
                 >
-                  Popular
+                  <MessageSquare className="h-3.5 w-3.5 mr-1.5" />
+                  Feeds
                 </Button>
                 <Button 
                   variant="ghost" 
-                  className="px-4 py-2 h-auto rounded-full text-sm font-medium text-muted-foreground hover:bg-muted"
+                  className={`px-3 py-1 sm:px-4 sm:py-2 h-auto rounded-full text-xs sm:text-sm font-medium ${contentType === 'video' ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:bg-muted'} touch-manipulation`}
+                  onClick={() => setContentType('video')}
                 >
-                  New
+                  <Video className="h-3.5 w-3.5 mr-1.5" />
+                  Video
                 </Button>
                 <Button 
                   variant="ghost" 
-                  className="px-4 py-2 h-auto rounded-full text-sm font-medium text-muted-foreground hover:bg-muted"
+                  className={`px-3 py-1 sm:px-4 sm:py-2 h-auto rounded-full text-xs sm:text-sm font-medium ${contentType === 'audio' ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:bg-muted'} touch-manipulation`}
+                  onClick={() => setContentType('audio')}
                 >
-                  Top
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  className="px-4 py-2 h-auto rounded-full text-sm font-medium text-muted-foreground hover:bg-muted"
-                >
-                  Rising
+                  <Mic className="h-3.5 w-3.5 mr-1.5" />
+                  Audio
                 </Button>
               </div>
             </div>
             
             <div className="space-y-4 md:space-y-6 mobile-bottom-safe">
+            {/* Empty State for filtered content */}
+            {filteredStatusUpdates.length === 0 && (
+              <div className="text-center py-12">
+                <div className="inline-flex items-center justify-center h-16 w-16 rounded-full bg-muted mb-4">
+                  {contentType === 'video' ? (
+                    <Video className="h-8 w-8 text-muted-foreground" />
+                  ) : contentType === 'audio' ? (
+                    <Mic className="h-8 w-8 text-muted-foreground" />
+                  ) : (
+                    <MessageSquare className="h-8 w-8 text-muted-foreground" />
+                  )}
+                </div>
+                <h3 className="text-lg font-medium mb-2">No {contentType} content found</h3>
+                <p className="text-muted-foreground text-sm max-w-md mx-auto">
+                  {contentType === 'video' ? 
+                    "There are no video posts to display. Create a video post or check back later." :
+                    contentType === 'audio' ? 
+                    "There are no audio posts to display. Create an audio post or check back later." :
+                    "There are no posts to display. Create a post or check back later."}
+                </p>
+                <Button
+                  className="mt-4"
+                  onClick={() => setShowPostDialog(true)}
+                >
+                  <PenSquare className="h-4 w-4 mr-2" />
+                  Create a Post
+                </Button>
+              </div>
+            )}
+            
             {/* Status Updates */}
             {filteredStatusUpdates.map((status, index) => (
               <div 
@@ -1735,82 +1881,6 @@ export function TikTokStyleFeed() {
           </div>
         </div>
       </Card>
-      </div>
-      
-      {/* Right Sidebar */}
-      <div className="sidebar-column w-64 flex-shrink-0 hidden lg:block">
-        <Card className="border-0 shadow-md rounded-lg overflow-hidden bg-card dark:bg-card/90 backdrop-blur-sm h-screen sticky top-0">
-          <div className="p-5 space-y-4">
-            <div className="flex justify-between items-center mb-2">
-              <h3 className="font-semibold text-foreground">Tanzania Financial Trends</h3>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-full hover:bg-muted hover:text-primary transition-colors duration-200">
-                <RefreshCw className="h-4 w-4" />
-              </Button>
-            </div>
-            
-            <div className="space-y-4">
-              <div className="flex items-center gap-3 p-2 hover:bg-muted rounded-lg transition-colors duration-200 cursor-pointer group">
-                <span className="text-primary font-bold text-lg min-w-[20px]">1</span>
-                <span className="flex-1 truncate content-fit text-foreground group-hover:text-primary transition-colors duration-200">TSE Index rises 3.2%</span>
-                <Badge className="bg-primary/10 text-primary hover:bg-primary/20 transition-colors duration-200">↑</Badge>
-              </div>
-              
-              <div className="flex items-center gap-3 p-2 hover:bg-muted rounded-lg transition-colors duration-200 cursor-pointer group">
-                <span className="text-primary font-bold text-lg min-w-[20px]">2</span>
-                <span className="flex-1 truncate content-fit text-foreground group-hover:text-primary transition-colors duration-200">CRDB Bank Q1 results</span>
-                <Badge className="bg-primary/10 text-primary hover:bg-primary/20 transition-colors duration-200">↑</Badge>
-              </div>
-              
-              <div className="flex items-center gap-3 p-2 hover:bg-muted rounded-lg transition-colors duration-200 cursor-pointer group">
-                <span className="text-primary font-bold text-lg min-w-[20px]">3</span>
-                <span className="flex-1 truncate content-fit text-foreground group-hover:text-primary transition-colors duration-200">Shilling stabilizes against USD</span>
-                <span className="text-xs text-muted-foreground min-w-[40px] text-right">12.5K</span>
-              </div>
-              
-              <div className="flex items-center gap-3 p-2 hover:bg-muted rounded-lg transition-colors duration-200 cursor-pointer group">
-                <span className="text-muted-foreground font-bold text-lg min-w-[20px]">4</span>
-                <span className="flex-1 truncate content-fit text-foreground group-hover:text-primary transition-colors duration-200">BOT policy rate unchanged</span>
-                <span className="text-xs text-muted-foreground min-w-[80px] text-right">Financial News</span>
-              </div>
-              
-              <div className="flex items-center gap-3 p-2 hover:bg-muted rounded-lg transition-colors duration-200 cursor-pointer group">
-                <span className="text-muted-foreground font-bold text-lg min-w-[20px]">5</span>
-                <span className="flex-1 truncate content-fit text-foreground group-hover:text-primary transition-colors duration-200">NMB dividend announcement</span>
-                <span className="text-xs text-muted-foreground min-w-[40px] text-right">8.7K</span>
-              </div>
-              
-              <div className="flex items-center gap-3 p-2 hover:bg-muted rounded-lg transition-colors duration-200 cursor-pointer group">
-                <span className="text-muted-foreground font-bold text-lg min-w-[20px]">6</span>
-                <span className="flex-1 truncate content-fit text-foreground group-hover:text-primary transition-colors duration-200">TBL shares surge 5.4%</span>
-                <span className="text-xs text-muted-foreground min-w-[40px] text-right">7.2K</span>
-              </div>
-            </div>
-            
-            <div className="border-t border-border pt-4">
-              <h4 className="font-medium text-sm mb-3">Most Trending</h4>
-              
-              <div className="bg-muted/30 rounded-lg p-3 space-y-3">
-                <div className="flex items-start gap-2">
-                  <Badge className="bg-primary text-primary-foreground mt-0.5">HOT</Badge>
-                  <div>
-                    <h5 className="font-medium text-sm">Tanzania Mobile Money Transactions Hit Record High</h5>
-                    <p className="text-xs text-muted-foreground mt-1">Mobile money transactions in Tanzania reached a record 12.2 trillion shillings in Q1 2025, marking a 24% increase year-over-year.</p>
-                    <div className="flex items-center gap-2 mt-2">
-                      <Badge variant="outline" className="text-[10px] h-4 px-1">Finance</Badge>
-                      <Badge variant="outline" className="text-[10px] h-4 px-1">Mobile Money</Badge>
-                      <Badge variant="outline" className="text-[10px] h-4 px-1">Growth</Badge>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="flex justify-between items-center text-xs text-muted-foreground">
-                  <span>32.4K views</span>
-                  <span>Updated 2h ago</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </Card>
       </div>
       
       {/* Stream Playback Dialog */}

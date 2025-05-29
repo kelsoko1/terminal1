@@ -32,6 +32,10 @@ model User {
   createdBy         String?
   isOrganizationAdmin Boolean      @default(false)
   posts             Post[]
+  streams           Stream[]
+  sentMessages      Message[]      @relation("SentMessages")
+  receivedMessages  Message[]      @relation("ReceivedMessages")
+  image             String?
 }
 
 model Organization {
@@ -214,8 +218,64 @@ enum AnalysisType {
   FUNDAMENTAL
 }
 
+model Message {
+  id                String         @id @default(uuid())
+  senderId          String
+  sender            User           @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  receiverId        String
+  receiver          User           @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
+  content           String
+  read              Boolean        @default(false)
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  @@index([senderId])
+  @@index([receiverId])
+  @@index([createdAt])
+}
+
 enum AttachmentType {
   IMAGE
   DOCUMENT
   VIDEO
+}
+
+model Trade {
+  id                String         @id @default(uuid())
+  userId            String
+  symbol            String
+  quantity          Int
+  price             Float
+  type              TradeType
+  status            TradeStatus    @default(COMPLETED)
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+}
+
+enum TradeStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
+  FAILED
+}
+
+model Stream {
+  id                String         @id @default(uuid())
+  userId            String
+  user              User           @relation(fields: [userId], references: [id])
+  title             String
+  viewers           Int            @default(0)
+  isLive            Boolean        @default(true)
+  startTime         DateTime       @default(now())
+  endTime           DateTime?
+  mediaType         StreamMediaType
+  mediaUrl          String?
+  duration          Int?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+}
+
+enum StreamMediaType {
+  VIDEO
+  AUDIO
 }
