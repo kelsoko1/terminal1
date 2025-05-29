@@ -48,21 +48,43 @@ export function InvestorProfile() {
     
     setIsLoading(true)
     try {
-      const response = await fetch(`/api/investors/profile?userId=${user.id}`)
+      // Fetch user account data from our new API endpoint
+      const accountResponse = await fetch(`/api/users/account?userId=${user.id}`)
       
-      if (response.ok) {
-        const data = await response.json()
+      if (accountResponse.ok) {
+        const accountData = await accountResponse.json()
         
-        // Update profile data with fetched information
+        // Update basic profile data
         setProfileData(prev => ({
           ...prev,
-          investorBio: data.investorBio || '',
-          investmentGoals: data.investmentGoals || '',
-          riskTolerance: data.riskTolerance || 'moderate'
+          name: accountData.user.name || '',
+          email: accountData.user.email || '',
+          contactNumber: accountData.user.contactNumber || '',
+          joinDate: new Date(accountData.user.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+        }))
+      }
+      
+      // Fetch additional investor profile data
+      const profileResponse = await fetch(`/api/users/portfolio?userId=${user.id}`)
+      
+      if (profileResponse.ok) {
+        const profileData = await profileResponse.json()
+        
+        // Update investment-specific profile data
+        setProfileData(prev => ({
+          ...prev,
+          investorBio: profileData.investorBio || '',
+          investmentGoals: profileData.investmentGoals || '',
+          riskTolerance: profileData.riskTolerance || 'moderate'
         }))
       }
     } catch (error) {
       console.error('Error fetching investor profile:', error)
+      toast({
+        title: 'Error loading profile',
+        description: 'Could not load your profile data. Please try again later.',
+        variant: 'destructive',
+      })
     } finally {
       setIsLoading(false)
     }

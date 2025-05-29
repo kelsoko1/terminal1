@@ -4,11 +4,11 @@ import { SecurityType, OrderType, OrderSide, OrderStatus, TimeInForce } from '..
 
 // PostgreSQL connection
 const pool = new Pool({
-  user: process.env.POSTGRES_USER || 'webtrader',
-  password: process.env.POSTGRES_PASSWORD || 'webtrader_secret',
+  user: process.env.POSTGRES_USER || 'kelsoko',
+  password: process.env.POSTGRES_PASSWORD || 'kelsoko_secret',
   host: process.env.POSTGRES_HOST || 'localhost',
   port: parseInt(process.env.POSTGRES_PORT || '5432'),
-  database: process.env.POSTGRES_DB || 'webtrader',
+  database: process.env.POSTGRES_DB || 'terminaldb',
 });
 
 // Redis connection
@@ -94,39 +94,39 @@ export class DatabaseService {
 
   // Redis operations
   async cacheMarketData(securityId: string, data: any) {
-    const key = `${this.MARKET_DATA_KEY}:${securityId}`;
+    const key = `${DatabaseService.MARKET_DATA_KEY}:${securityId}`;
     await redis.set(key, JSON.stringify(data), 'EX', 60); // Cache for 1 minute
   }
 
   async getCachedMarketData(securityId: string) {
-    const key = `${this.MARKET_DATA_KEY}:${securityId}`;
+    const key = `${DatabaseService.MARKET_DATA_KEY}:${securityId}`;
     const data = await redis.get(key);
     return data ? JSON.parse(data) : null;
   }
 
   async cacheUserSession(userId: string, sessionData: any) {
-    const key = `${this.USER_SESSION_KEY}:${userId}`;
+    const key = `${DatabaseService.USER_SESSION_KEY}:${userId}`;
     await redis.set(key, JSON.stringify(sessionData), 'EX', 3600); // Cache for 1 hour
   }
 
   async getCachedUserSession(userId: string) {
-    const key = `${this.USER_SESSION_KEY}:${userId}`;
+    const key = `${DatabaseService.USER_SESSION_KEY}:${userId}`;
     const data = await redis.get(key);
     return data ? JSON.parse(data) : null;
   }
 
   async addToWatchlist(userId: string, securityId: string) {
-    const key = `${this.WATCHLIST_KEY}:${userId}`;
+    const key = `${DatabaseService.WATCHLIST_KEY}:${userId}`;
     await redis.sadd(key, securityId);
   }
 
   async removeFromWatchlist(userId: string, securityId: string) {
-    const key = `${this.WATCHLIST_KEY}:${userId}`;
+    const key = `${DatabaseService.WATCHLIST_KEY}:${userId}`;
     await redis.srem(key, securityId);
   }
 
   async getWatchlist(userId: string) {
-    const key = `${this.WATCHLIST_KEY}:${userId}`;
+    const key = `${DatabaseService.WATCHLIST_KEY}:${userId}`;
     return await redis.smembers(key);
   }
 

@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { useStore } from '@/lib/store';
 import {
   Card,
@@ -9,9 +10,32 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Trade } from '@/lib/types';
 
 export function TradeHistory() {
-  const { trades } = useStore();
+  const { trades: storeTrades, user, syncTrades, fetchTrades } = useStore();
+  const [isLoading, setIsLoading] = useState(false);
+  const [trades, setTrades] = useState<Trade[]>(storeTrades);
+  
+  // Fetch trades when component mounts or user changes
+  useEffect(() => {
+    async function loadTrades() {
+      if (!user) return;
+      
+      setIsLoading(true);
+      try {
+        // Use the fetchTrades function from the store
+        const fetchedTrades = await fetchTrades(user.id);
+        setTrades(fetchedTrades);
+      } catch (error) {
+        console.error('Error fetching trades:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    
+    loadTrades();
+  }, [user, fetchTrades]);
 
   return (
     <Card>
@@ -53,7 +77,12 @@ export function TradeHistory() {
               </div>
             </div>
           ))}
-          {trades.length === 0 && (
+          {isLoading && (
+            <p className="text-sm text-muted-foreground text-center py-4">
+              Loading your trade history...
+            </p>
+          )}
+          {!isLoading && trades.length === 0 && (
             <p className="text-sm text-muted-foreground text-center py-4">
               No DSE trading activity yet. Start trading to see your history here.
             </p>

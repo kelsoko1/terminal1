@@ -11,7 +11,7 @@ import { ConnectionStatus } from '@/components/ConnectionStatus';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'WebTrader',
+  title: 'Kelsoko Terminal',
   description: 'Trading platform for stocks, bonds and mutual funds',
 };
 

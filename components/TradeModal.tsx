@@ -25,80 +25,122 @@ export function TradeModal({ stock, type, onClose }: TradeModalProps) {
   const { user, setUser, addTrade } = useStore();
   const { toast } = useToast();
 
-  const handleTrade = () => {
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  const handleTrade = async () => {
     if (!user) return;
 
     const qty = parseInt(quantity);
     const total = qty * stock.price;
+    
+    setIsProcessing(true);
 
-    if (type === 'buy') {
-      if (total > user.balance) {
-        toast({
-          title: 'Insufficient funds',
-          description: 'You do not have enough balance for this trade.',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      setUser({
-        ...user,
-        balance: user.balance - total,
-        portfolio: {
-          ...user.portfolio,
-          [stock.symbol]: {
-            quantity: (user.portfolio[stock.symbol]?.quantity || 0) + qty,
-            averagePrice:
-              ((user.portfolio[stock.symbol]?.averagePrice || 0) *
-                (user.portfolio[stock.symbol]?.quantity || 0) +
-                total) /
-              ((user.portfolio[stock.symbol]?.quantity || 0) + qty),
-          },
-        },
-      });
-    } else {
-      const currentQty = user.portfolio[stock.symbol]?.quantity || 0;
-      if (qty > currentQty) {
-        toast({
-          title: 'Insufficient shares',
-          description: 'You do not have enough shares for this trade.',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      const newQty = currentQty - qty;
-      const newPortfolio = { ...user.portfolio };
-      if (newQty === 0) {
-        delete newPortfolio[stock.symbol];
+    try {
+      // Validate the trade
+      if (type === 'buy') {
+        if (total > user.balance) {
+          toast({
+            title: 'Insufficient funds',
+            description: 'You do not have enough balance for this trade.',
+            variant: 'destructive',
+          });
+          return;
+        }
       } else {
-        newPortfolio[stock.symbol] = {
-          ...newPortfolio[stock.symbol],
-          quantity: newQty,
-        };
+        // For sell orders, check if user has enough shares
+        const currentQty = user.portfolio[stock.symbol]?.quantity || 0;
+        if (qty > currentQty) {
+          toast({
+            title: 'Insufficient shares',
+            description: 'You do not have enough shares for this trade.',
+            variant: 'destructive',
+          });
+          return;
+        }
       }
 
-      setUser({
-        ...user,
-        balance: user.balance + total,
-        portfolio: newPortfolio,
+      // Submit the trade to the API
+      const response = await fetch('/api/trading/trades', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: user.id,
+          symbol: stock.symbol,
+          quantity: qty,
+          price: stock.price,
+          type: type.toUpperCase(),
+        }),
       });
+
+      if (!response.ok) {
+        throw new Error(`Failed to execute trade: ${response.status}`);
+      }
+
+      // Update local state based on trade type
+      if (type === 'buy') {
+        setUser({
+          ...user,
+          balance: user.balance - total,
+          portfolio: {
+            ...user.portfolio,
+            [stock.symbol]: {
+              quantity: (user.portfolio[stock.symbol]?.quantity || 0) + qty,
+              averagePrice:
+                ((user.portfolio[stock.symbol]?.averagePrice || 0) *
+                  (user.portfolio[stock.symbol]?.quantity || 0) +
+                  total) /
+                ((user.portfolio[stock.symbol]?.quantity || 0) + qty),
+            },
+          },
+        });
+      } else {
+        const currentQty = user.portfolio[stock.symbol]?.quantity || 0;
+        const newQty = currentQty - qty;
+        const newPortfolio = { ...user.portfolio };
+        
+        if (newQty === 0) {
+          delete newPortfolio[stock.symbol];
+        } else {
+          newPortfolio[stock.symbol] = {
+            ...newPortfolio[stock.symbol],
+            quantity: newQty,
+          };
+        }
+
+        setUser({
+          ...user,
+          balance: user.balance + total,
+          portfolio: newPortfolio,
+        });
+      }
+
+      // Add the trade to the store
+      await addTrade({
+        symbol: stock.symbol,
+        quantity: qty,
+        price: stock.price,
+        type,
+        timestamp: new Date(),
+      });
+
+      toast({
+        title: 'Trade executed',
+        description: `Successfully ${type === 'buy' ? 'bought' : 'sold'} ${qty} shares of ${stock.symbol}`,
+      });
+
+      onClose();
+    } catch (error) {
+      console.error('Error executing trade:', error);
+      toast({
+        title: 'Trade failed',
+        description: error instanceof Error ? error.message : 'Unknown error occurred',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsProcessing(false);
     }
-
-    addTrade({
-      symbol: stock.symbol,
-      quantity: qty,
-      price: stock.price,
-      type,
-      timestamp: new Date(),
-    });
-
-    toast({
-      title: 'Trade executed',
-      description: `Successfully ${type === 'buy' ? 'bought' : 'sold'} ${qty} shares of ${stock.symbol}`,
-    });
-
-    onClose();
   };
 
   return (
@@ -125,11 +167,11 @@ export function TradeModal({ stock, type, onClose }: TradeModalProps) {
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="outline" onClick={onClose} disabled={isProcessing}>
             Cancel
           </Button>
-          <Button onClick={handleTrade}>
-            {type === 'buy' ? 'Buy' : 'Sell'}
+          <Button onClick={handleTrade} disabled={isProcessing}>
+            {isProcessing ? 'Processing...' : type === 'buy' ? 'Buy' : 'Sell'}
           </Button>
         </DialogFooter>
       </DialogContent>

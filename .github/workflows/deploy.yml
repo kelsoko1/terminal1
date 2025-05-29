@@ -1,9 +1,10 @@
-name: Deploy to EC2
+name: Deploy to AWS EC2
 
 on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -13,6 +14,18 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run linting
+        run: npm run lint
+
       - name: Setup SSH
         run: |
           mkdir -p ~/.ssh
@@ -20,12 +33,51 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
 
-      - name: Deploy via SSH
+      - name: Deploy to EC2
         run: |
           ssh ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
+            # Navigate to project directory
             cd ~/terminal1
+            
+            # Backup .env file
+            cp .env .env.backup
+            
+            # Pull latest code
             git pull origin main
-            npm install --legacy-peer-deps
+            
+            # Restore .env file
+            cp .env.backup .env
+            
+            # Install dependencies
+            npm ci --production
+            
+            # Generate Prisma client
+            npx prisma generate
+            
+            # Run database migrations
+            npx prisma migrate deploy
+            
+            # Build the application
             npm run build
-            pm2 restart terminal-app
+            
+            # Restart the application with PM2
+            pm2 restart nextjs-app || pm2 start ecosystem.config.js
+            
+            # Save PM2 configuration
+            pm2 save
+            
+            # Clean up
+            npm cache clean --force
+            rm -rf .next/cache
           EOF
+
+      - name: Verify Deployment
+        run: |
+          # Wait for the application to start
+          sleep 10
+          
+          # Check if the application is running
+          ssh ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} 'pm2 list'
+          
+          # Send a notification
+          echo "Deployment completed successfully!"

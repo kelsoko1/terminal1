@@ -1,41 +1,11 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { Stock, User, Trade } from './types';
-import { initialStocks } from './mockData';
 import { databases, STOCKS_COLLECTION_ID, TRADES_COLLECTION_ID, DATABASE_ID } from './appwrite';
 import { Query } from 'appwrite';
 
-// Initial mock trades for DSE stocks
-const initialTrades: Trade[] = [
-  {
-    symbol: 'CRDB',
-    quantity: 1000,
-    price: 400,
-    type: 'buy',
-    timestamp: new Date('2024-03-15T10:30:00'),
-  },
-  {
-    symbol: 'NMB',
-    quantity: 500,
-    price: 3900,
-    type: 'buy',
-    timestamp: new Date('2024-03-15T11:15:00'),
-  },
-  {
-    symbol: 'TBL',
-    quantity: 200,
-    price: 10900,
-    type: 'sell',
-    timestamp: new Date('2024-03-15T13:45:00'),
-  },
-  {
-    symbol: 'TPCC',
-    quantity: 300,
-    price: 4200,
-    type: 'buy',
-    timestamp: new Date('2024-03-15T14:20:00'),
-  },
-];
+// Initialize with empty trades array
+const initialTrades: Trade[] = [];
 
 // Define audio stream interface
 export interface AudioStream {
@@ -92,6 +62,7 @@ interface StoreState {
   updateLastSyncTimestamp: () => void;
   syncStocks: () => Promise<void>;
   syncTrades: () => Promise<void>;
+  fetchTrades: (userId?: string) => Promise<Trade[]>;
   // Audio stream functions
   saveAudioStream: (stream: AudioStream) => void;
   updateAudioStream: (streamId: string, updates: Partial<AudioStream>) => void;
@@ -109,7 +80,7 @@ interface StoreState {
 export const useStore = create<StoreState>()(
   persist(
     (set, get) => ({
-      stocks: initialStocks,
+      stocks: [],
       user: null,
       trades: initialTrades,
       isConnected: true,
@@ -158,12 +129,18 @@ export const useStore = create<StoreState>()(
       syncStocks: async () => {
         try {
           set({ isSyncing: true });
-          const response = await databases.listDocuments(
-            DATABASE_ID,
-            STOCKS_COLLECTION_ID
-          );
+          
+          // Fetch stocks from the real API endpoint
+          const response = await fetch('/api/market/stocks');
+          
+          if (!response.ok) {
+            throw new Error(`Failed to fetch stocks: ${response.status}`);
+          }
+          
+          const data = await response.json();
+          
           set({ 
-            stocks: response.documents as Stock[],
+            stocks: data.stocks,
             lastSyncTimestamp: Date.now()
           });
         } catch (error) {
@@ -172,28 +149,50 @@ export const useStore = create<StoreState>()(
           set({ isSyncing: false });
         }
       },
-
-      syncTrades: async () => {
-        const userId = get().user?.$id;
-        if (!userId) return;
-
+      
+      // Fetch trades from the API
+      fetchTrades: async (userId?: string) => {
         try {
           set({ isSyncing: true });
-          const response = await databases.listDocuments(
-            DATABASE_ID,
-            TRADES_COLLECTION_ID,
-            [Query.equal('userId', userId)]
-          );
           
-          const trades = response.documents.map(doc => ({
-            ...doc,
-            timestamp: new Date(doc.timestamp)
-          })) as Trade[];
-
+          // Build query parameters
+          const params = new URLSearchParams();
+          if (userId) {
+            params.append('userId', userId);
+          }
+          
+          // Fetch trades from the API endpoint
+          const response = await fetch(`/api/trading/trades?${params.toString()}`);
+          
+          if (!response.ok) {
+            throw new Error(`Failed to fetch trades: ${response.status}`);
+          }
+          
+          const data = await response.json();
+          
           set({ 
-            trades,
+            trades: data.trades,
             lastSyncTimestamp: Date.now()
           });
+          
+          return data.trades;
+        } catch (error) {
+          console.error('Failed to fetch trades:', error);
+          return [];
+        } finally {
+          set({ isSyncing: false });
+        }
+      },
+
+      syncTrades: async () => {
+        const userId = get().user?.id;
+        
+        try {
+          set({ isSyncing: true });
+          
+          // Use our fetchTrades function to get trades from the API
+          await get().fetchTrades(userId);
+          
         } catch (error) {
           console.error('Failed to sync trades:', error);
         } finally {

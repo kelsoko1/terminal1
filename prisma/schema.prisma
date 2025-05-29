@@ -44,3 +44,4 @@ enum AttachmentType {
   DOCUMENT
   VIDEO
 }
+

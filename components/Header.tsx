@@ -69,7 +69,7 @@ export function Header() {
           
           <Link href="/" className="flex items-center gap-2">
             <BarChart2 className="h-6 w-6 text-primary" />
-            <span className="text-lg font-bold hidden sm:inline-block">Terminal</span>
+            <span className="text-lg font-bold hidden sm:inline-block">Kelsoko Terminal</span>
           </Link>
 
           <LanguageSwitcher />
@@ -163,7 +163,7 @@ export function Header() {
             <div className="flex items-center justify-between p-4 border-b safe-area-top">
               <div className="flex items-center gap-2">
                 <BarChart2 className="h-6 w-6 text-primary" />
-                <span className="text-lg font-bold">Terminal</span>
+                <span className="text-lg font-bold">Kelsoko Terminal</span>
               </div>
               <Button
                 variant="ghost"

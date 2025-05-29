@@ -13,6 +13,15 @@ export type OrderSide = 'buy' | 'sell';
 export type OrderStatus = 'pending' | 'executed' | 'cancelled' | 'expired';
 export type TimeInForce = 'day' | 'gtc';
 
+export interface UserPortfolioPosition {
+  quantity: number;
+  averagePrice: number;
+}
+
+export interface UserPortfolio {
+  [symbol: string]: UserPortfolioPosition;
+}
+
 export interface User {
   id: string;
   dsexId?: string;
@@ -20,6 +29,8 @@ export interface User {
   name: string;
   phone?: string;
   status: string;
+  balance: number;
+  portfolio: UserPortfolio;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -83,6 +94,17 @@ export interface Transaction {
   commission: number;
   totalAmount: number;
   createdAt: Date;
+}
+
+export interface Trade {
+  symbol: string;
+  quantity: number;
+  price: number;
+  type: 'buy' | 'sell';
+  timestamp: Date;
+  id?: string;
+  userId?: string;
+  status?: string;
 }
 
 export interface MarketData {

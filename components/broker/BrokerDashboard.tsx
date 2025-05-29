@@ -1,11 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
   LineChart,
   Line,
@@ -33,35 +35,210 @@ import {
   AlertCircle,
   Calendar,
   RefreshCw,
-  Download
+  Download,
+  Info
 } from 'lucide-react'
+import { useAuth } from '@/lib/auth/auth-context'
 
-const performanceData = [
-  { month: 'Jan', clients: 120, transactions: 450, revenue: 15000000 },
-  { month: 'Feb', clients: 135, transactions: 520, revenue: 18200000 },
-  { month: 'Mar', clients: 142, transactions: 610, revenue: 22400000 },
-  { month: 'Apr', clients: 156, transactions: 580, revenue: 21100000 },
-  { month: 'May', clients: 168, transactions: 650, revenue: 24200000 },
-  { month: 'Jun', clients: 175, transactions: 720, revenue: 27500000 },
-]
+// Define interfaces for the dashboard data
+interface StockData {
+  name: string;
+  value: number;
+  change: number;
+  color: string;
+}
 
-const stocksData = [
-  { name: 'CRDB', value: 85.2, change: 2.3, color: '#10b981' },
-  { name: 'NMB', value: 62.8, change: 1.5, color: '#10b981' },
-  { name: 'TBL', value: 48.5, change: -0.8, color: '#ef4444' },
-  { name: 'TPCC', value: 35.3, change: 0.5, color: '#10b981' },
-  { name: 'EABL', value: 28.7, change: -1.2, color: '#ef4444' },
-]
+interface ClientDistribution {
+  name: string;
+  value: number;
+  color: string;
+}
 
-const clientDistribution = [
-  { name: 'Retail', value: 120, color: '#8884d8' },
-  { name: 'Institutional', value: 35, color: '#82ca9d' },
-  { name: 'Foreign', value: 20, color: '#ffc658' },
-]
+interface PerformanceData {
+  month: string;
+  clients: number;
+  transactions: number;
+  revenue: number;
+}
+
+interface BrokerDashboardData {
+  stats: {
+    totalClients: number;
+    clientsGrowth: number;
+    monthlyTransactions: number;
+    transactionsGrowth: number;
+    commissionRevenue: number;
+    revenueGrowth: number;
+    marketIndex: number;
+    marketIndexChange: number;
+  };
+  marketOverview: {
+    status: 'OPEN' | 'CLOSED';
+    hours: string;
+    ordersToday: number;
+    ordersDiff: number;
+    pendingSettlements: number;
+    settlementsDiff: number;
+    tradeVolume: number;
+    tradeVolumeChange: number;
+    marketCap: number;
+    marketCapChange: number;
+  };
+  alerts: Array<{
+    type: 'warning' | 'success' | 'info' | 'error';
+    title: string;
+    message: string;
+    time: string;
+  }>;
+  performanceData: PerformanceData[];
+  stocksData: StockData[];
+  clientDistribution: ClientDistribution[];
+}
 
 export default function BrokerDashboard() {
+  const { token } = useAuth()
   const [timeRange, setTimeRange] = useState('month')
+  const [dashboardData, setDashboardData] = useState<BrokerDashboardData | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [chartType, setChartType] = useState('line')
+  
+  // Fetch dashboard data
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      if (!token) return
+      
+      setIsLoading(true)
+      setError(null)
+      
+      try {
+        const response = await fetch(`/api/broker/dashboard?timeRange=${timeRange}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        })
+        
+        if (!response.ok) {
+          const errorData = await response.json()
+          throw new Error(errorData.message || 'Failed to fetch dashboard data')
+        }
+        
+        const data = await response.json()
+        setDashboardData(data)
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error)
+        setError(error instanceof Error ? error.message : 'An unexpected error occurred')
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    
+    fetchDashboardData()
+  }, [token, timeRange])
+  
+  // Handle refresh data
+  const handleRefreshData = () => {
+    setIsLoading(true)
+    setError(null)
+    
+    // Re-fetch data with the current timeRange
+    const fetchDashboardData = async () => {
+      if (!token) return
+      
+      try {
+        const response = await fetch(`/api/broker/dashboard?timeRange=${timeRange}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Cache-Control': 'no-cache'
+          },
+          method: 'GET'
+        })
+        
+        if (!response.ok) {
+          const errorData = await response.json()
+          throw new Error(errorData.message || 'Failed to refresh dashboard data')
+        }
+        
+        const data = await response.json()
+        setDashboardData(data)
+      } catch (error) {
+        console.error('Error refreshing dashboard data:', error)
+        setError(error instanceof Error ? error.message : 'An unexpected error occurred while refreshing')
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    
+    fetchDashboardData()
+  }
 
+  // Show error if there's an error fetching data
+  if (error) {
+    return (
+      <Alert variant="destructive" className="mb-4">
+        <AlertCircle className="h-4 w-4" />
+        <AlertTitle>Error</AlertTitle>
+        <AlertDescription>{error}</AlertDescription>
+      </Alert>
+    )
+  }
+  
+  // Show loading skeleton if data is loading
+  if (isLoading && !dashboardData) {
+    return (
+      <div className="space-y-6">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Card key={i}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <Skeleton className="h-4 w-[120px]" />
+                <Skeleton className="h-4 w-4 rounded-full" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-8 w-[100px] mb-2" />
+                <Skeleton className="h-4 w-[150px] mb-2" />
+                <Skeleton className="h-2 w-full" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+        
+        <div className="grid gap-4 md:grid-cols-7">
+          <Card className="md:col-span-4">
+            <CardHeader>
+              <Skeleton className="h-6 w-[150px] mb-2" />
+              <Skeleton className="h-4 w-[200px]" />
+            </CardHeader>
+            <CardContent>
+              <Skeleton className="h-[300px] w-full" />
+            </CardContent>
+          </Card>
+          
+          <Card className="md:col-span-3">
+            <CardHeader>
+              <Skeleton className="h-6 w-[120px] mb-2" />
+              <Skeleton className="h-4 w-[180px]" />
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="flex items-start gap-3 pb-3 border-b">
+                    <Skeleton className="h-5 w-5 rounded-full" />
+                    <div className="w-full">
+                      <Skeleton className="h-4 w-[120px] mb-2" />
+                      <Skeleton className="h-3 w-full" />
+                      <Skeleton className="h-3 w-[80px] mt-1" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    )
+  }
+  
   return (
     <div className="space-y-6">
       {/* Top stats cards */}
@@ -72,13 +249,27 @@ export default function BrokerDashboard() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">175</div>
-            <div className="flex items-center pt-1 text-xs text-green-500">
-              <ArrowUpRight className="mr-1 h-3 w-3" />
-              <span>+4.1%</span>
-              <span className="text-muted-foreground ml-1">from last month</span>
-            </div>
-            <Progress className="mt-3" value={75} />
+            {isLoading ? (
+              <>
+                <Skeleton className="h-8 w-[100px] mb-2" />
+                <Skeleton className="h-4 w-[150px] mb-2" />
+                <Skeleton className="h-2 w-full" />
+              </>
+            ) : (
+              <>
+                <div className="text-2xl font-bold">{dashboardData?.stats.totalClients}</div>
+                <div className={`flex items-center pt-1 text-xs ${dashboardData?.stats.clientsGrowth && dashboardData.stats.clientsGrowth > 0 ? 'text-green-500' : 'text-red-500'}`}>
+                  {dashboardData?.stats.clientsGrowth && dashboardData.stats.clientsGrowth > 0 ? (
+                    <ArrowUpRight className="mr-1 h-3 w-3" />
+                  ) : (
+                    <ArrowDownRight className="mr-1 h-3 w-3" />
+                  )}
+                  <span>{dashboardData?.stats.clientsGrowth && dashboardData.stats.clientsGrowth > 0 ? '+' : ''}{dashboardData?.stats.clientsGrowth}%</span>
+                  <span className="text-muted-foreground ml-1">from last month</span>
+                </div>
+                <Progress className="mt-3" value={75} />
+              </>
+            )}
           </CardContent>
         </Card>
         
@@ -88,13 +279,27 @@ export default function BrokerDashboard() {
             <CreditCard className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">720</div>
-            <div className="flex items-center pt-1 text-xs text-green-500">
-              <ArrowUpRight className="mr-1 h-3 w-3" />
-              <span>+10.8%</span>
-              <span className="text-muted-foreground ml-1">from last month</span>
-            </div>
-            <div className="mt-3 text-xs text-muted-foreground">85% execution rate</div>
+            {isLoading ? (
+              <>
+                <Skeleton className="h-8 w-[100px] mb-2" />
+                <Skeleton className="h-4 w-[150px] mb-2" />
+                <Skeleton className="h-2 w-full" />
+              </>
+            ) : (
+              <>
+                <div className="text-2xl font-bold">{dashboardData?.stats.monthlyTransactions}</div>
+                <div className={`flex items-center pt-1 text-xs ${dashboardData?.stats.transactionsGrowth && dashboardData.stats.transactionsGrowth > 0 ? 'text-green-500' : 'text-red-500'}`}>
+                  {dashboardData?.stats.transactionsGrowth && dashboardData.stats.transactionsGrowth > 0 ? (
+                    <ArrowUpRight className="mr-1 h-3 w-3" />
+                  ) : (
+                    <ArrowDownRight className="mr-1 h-3 w-3" />
+                  )}
+                  <span>{dashboardData?.stats.transactionsGrowth && dashboardData.stats.transactionsGrowth > 0 ? '+' : ''}{dashboardData?.stats.transactionsGrowth}%</span>
+                  <span className="text-muted-foreground ml-1">from last month</span>
+                </div>
+                <div className="mt-3 text-xs text-muted-foreground">85% execution rate</div>
+              </>
+            )}
           </CardContent>
         </Card>
         
@@ -104,13 +309,27 @@ export default function BrokerDashboard() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">TZS 27.5M</div>
-            <div className="flex items-center pt-1 text-xs text-green-500">
-              <ArrowUpRight className="mr-1 h-3 w-3" />
-              <span>+13.6%</span>
-              <span className="text-muted-foreground ml-1">from last month</span>
-            </div>
-            <Progress className="mt-3" value={85} />
+            {isLoading ? (
+              <>
+                <Skeleton className="h-8 w-[100px] mb-2" />
+                <Skeleton className="h-4 w-[150px] mb-2" />
+                <Skeleton className="h-2 w-full" />
+              </>
+            ) : (
+              <>
+                <div className="text-2xl font-bold">TZS {(dashboardData?.stats.commissionRevenue || 0) / 1000000}M</div>
+                <div className={`flex items-center pt-1 text-xs ${dashboardData?.stats.revenueGrowth && dashboardData.stats.revenueGrowth > 0 ? 'text-green-500' : 'text-red-500'}`}>
+                  {dashboardData?.stats.revenueGrowth && dashboardData.stats.revenueGrowth > 0 ? (
+                    <ArrowUpRight className="mr-1 h-3 w-3" />
+                  ) : (
+                    <ArrowDownRight className="mr-1 h-3 w-3" />
+                  )}
+                  <span>{dashboardData?.stats.revenueGrowth && dashboardData.stats.revenueGrowth > 0 ? '+' : ''}{dashboardData?.stats.revenueGrowth}%</span>
+                  <span className="text-muted-foreground ml-1">from last month</span>
+                </div>
+                <Progress className="mt-3" value={85} />
+              </>
+            )}
           </CardContent>
         </Card>
         
@@ -120,13 +339,27 @@ export default function BrokerDashboard() {
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">1,842.56</div>
-            <div className="flex items-center pt-1 text-xs text-red-500">
-              <ArrowDownRight className="mr-1 h-3 w-3" />
-              <span>-0.8%</span>
-              <span className="text-muted-foreground ml-1">today</span>
-            </div>
-            <div className="mt-3 text-xs text-muted-foreground">DSE All Share Index (DSEI)</div>
+            {isLoading ? (
+              <>
+                <Skeleton className="h-8 w-[100px] mb-2" />
+                <Skeleton className="h-4 w-[150px] mb-2" />
+                <Skeleton className="h-2 w-full" />
+              </>
+            ) : (
+              <>
+                <div className="text-2xl font-bold">{dashboardData?.stats.marketIndex.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                <div className={`flex items-center pt-1 text-xs ${dashboardData?.stats.marketIndexChange && dashboardData.stats.marketIndexChange > 0 ? 'text-green-500' : 'text-red-500'}`}>
+                  {dashboardData?.stats.marketIndexChange && dashboardData.stats.marketIndexChange > 0 ? (
+                    <ArrowUpRight className="mr-1 h-3 w-3" />
+                  ) : (
+                    <ArrowDownRight className="mr-1 h-3 w-3" />
+                  )}
+                  <span>{dashboardData?.stats.marketIndexChange && dashboardData.stats.marketIndexChange > 0 ? '+' : ''}{dashboardData?.stats.marketIndexChange}%</span>
+                  <span className="text-muted-foreground ml-1">today</span>
+                </div>
+                <div className="mt-3 text-xs text-muted-foreground">DSE All Share Index (DSEI)</div>
+              </>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -139,63 +372,115 @@ export default function BrokerDashboard() {
             <CardDescription>Real-time DSE market activity</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between border-b pb-2">
-                <div className="flex items-center gap-2">
-                  <Badge variant="outline" className="bg-green-50 text-green-700 hover:bg-green-50 border-green-200">
-                    OPEN
-                  </Badge>
-                  <span className="text-sm font-medium">DSE Market Status</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <Clock className="h-4 w-4 text-muted-foreground" />
-                  <span>10:00 - 15:30 EAT</span>
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <div className="text-sm font-medium">Orders Today</div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-2xl font-bold">125</span>
-                    <Badge variant="outline" className="text-xs">+12</Badge>
-                  </div>
-                </div>
-                
-                <div className="space-y-2">
-                  <div className="text-sm font-medium">Pending Settlements</div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-2xl font-bold">18</span>
-                    <Badge variant="outline" className="text-xs">-3</Badge>
-                  </div>
-                </div>
-                
-                <div className="space-y-2">
-                  <div className="text-sm font-medium">Trade Volume</div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-2xl font-bold">TZS 325M</span>
-                    <Badge variant="outline" className="text-green-600 text-xs">+5.2%</Badge>
-                  </div>
-                </div>
-                
-                <div className="space-y-2">
-                  <div className="text-sm font-medium">Market Cap</div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-2xl font-bold">TZS 15.2B</span>
-                    <Badge variant="outline" className="text-red-600 text-xs">-0.3%</Badge>
-                  </div>
+            {isLoading ? (
+              <div className="space-y-4">
+                <Skeleton className="h-10 w-full" />
+                <div className="grid grid-cols-2 gap-4">
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <div key={i} className="space-y-2">
+                      <Skeleton className="h-4 w-[100px]" />
+                      <div className="flex items-center justify-between">
+                        <Skeleton className="h-8 w-[80px]" />
+                        <Skeleton className="h-5 w-[40px]" />
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
-            </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between border-b pb-2">
+                  <div className="flex items-center gap-2">
+                    <Badge 
+                      variant="outline" 
+                      className={dashboardData?.marketOverview.status === 'OPEN' ? 
+                        "bg-green-50 text-green-700 hover:bg-green-50 border-green-200" : 
+                        "bg-red-50 text-red-700 hover:bg-red-50 border-red-200"}
+                    >
+                      {dashboardData?.marketOverview.status}
+                    </Badge>
+                    <span className="text-sm font-medium">DSE Market Status</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <Clock className="h-4 w-4 text-muted-foreground" />
+                    <span>{dashboardData?.marketOverview.hours}</span>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <div className="text-sm font-medium">Orders Today</div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-2xl font-bold">{dashboardData?.marketOverview.ordersToday}</span>
+                      <Badge 
+                        variant="outline" 
+                        className={`text-xs ${dashboardData?.marketOverview.ordersDiff && dashboardData.marketOverview.ordersDiff > 0 ? 'text-green-600' : 'text-red-600'}`}
+                      >
+                        {dashboardData?.marketOverview.ordersDiff && dashboardData.marketOverview.ordersDiff > 0 ? '+' : ''}
+                        {dashboardData?.marketOverview.ordersDiff}
+                      </Badge>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <div className="text-sm font-medium">Pending Settlements</div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-2xl font-bold">{dashboardData?.marketOverview.pendingSettlements}</span>
+                      <Badge 
+                        variant="outline" 
+                        className={`text-xs ${dashboardData?.marketOverview.settlementsDiff && dashboardData.marketOverview.settlementsDiff > 0 ? 'text-green-600' : 'text-red-600'}`}
+                      >
+                        {dashboardData?.marketOverview.settlementsDiff && dashboardData.marketOverview.settlementsDiff > 0 ? '+' : ''}
+                        {dashboardData?.marketOverview.settlementsDiff}
+                      </Badge>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <div className="text-sm font-medium">Trade Volume</div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-2xl font-bold">TZS {(dashboardData?.marketOverview.tradeVolume || 0) / 1000000}M</span>
+                      <Badge 
+                        variant="outline" 
+                        className={`text-xs ${dashboardData?.marketOverview.tradeVolumeChange && dashboardData.marketOverview.tradeVolumeChange > 0 ? 'text-green-600' : 'text-red-600'}`}
+                      >
+                        {dashboardData?.marketOverview.tradeVolumeChange && dashboardData.marketOverview.tradeVolumeChange > 0 ? '+' : ''}
+                        {dashboardData?.marketOverview.tradeVolumeChange}%
+                      </Badge>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <div className="text-sm font-medium">Market Cap</div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-2xl font-bold">TZS {(dashboardData?.marketOverview.marketCap || 0) / 1000000000}B</span>
+                      <Badge 
+                        variant="outline" 
+                        className={`text-xs ${dashboardData?.marketOverview.marketCapChange && dashboardData.marketOverview.marketCapChange > 0 ? 'text-green-600' : 'text-red-600'}`}
+                      >
+                        {dashboardData?.marketOverview.marketCapChange && dashboardData.marketOverview.marketCapChange > 0 ? '+' : ''}
+                        {dashboardData?.marketOverview.marketCapChange}%
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </CardContent>
           <CardFooter className="border-t pt-4 flex justify-between">
             <Button variant="outline" size="sm" className="gap-1">
               <Calendar className="h-4 w-4" />
               <span>Market Calendar</span>
             </Button>
-            <Button variant="outline" size="sm" className="gap-1">
-              <RefreshCw className="h-4 w-4" />
-              <span>Refresh Data</span>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="gap-1" 
+              onClick={handleRefreshData}
+              disabled={isLoading}
+            >
+              <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+              <span>{isLoading ? 'Refreshing...' : 'Refresh Data'}</span>
             </Button>
           </CardFooter>
         </Card>
@@ -206,34 +491,40 @@ export default function BrokerDashboard() {
             <CardDescription>Recent notifications</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-start gap-3 pb-3 border-b">
-                <AlertCircle className="h-5 w-5 text-yellow-500 mt-0.5 flex-shrink-0" />
-                <div>
-                  <p className="text-sm font-medium">Settlement Reminder</p>
-                  <p className="text-xs text-muted-foreground">18 trades pending settlement for T+3 cycle</p>
-                  <p className="text-xs text-muted-foreground mt-1">10:15 AM</p>
-                </div>
+            {isLoading ? (
+              <div className="space-y-4">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="flex items-start gap-3 pb-3 border-b">
+                    <Skeleton className="h-5 w-5 rounded-full" />
+                    <div className="w-full">
+                      <Skeleton className="h-4 w-[120px] mb-2" />
+                      <Skeleton className="h-3 w-full" />
+                      <Skeleton className="h-3 w-[80px] mt-1" />
+                    </div>
+                  </div>
+                ))}
               </div>
-              
-              <div className="flex items-start gap-3 pb-3 border-b">
-                <AlertCircle className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
-                <div>
-                  <p className="text-sm font-medium">System Update Complete</p>
-                  <p className="text-xs text-muted-foreground">Trading platform updated to version 2.4.1</p>
-                  <p className="text-xs text-muted-foreground mt-1">09:30 AM</p>
-                </div>
+            ) : (
+              <div className="space-y-4">
+                {dashboardData?.alerts.map((alert, index) => {
+                  let iconColor = 'text-blue-500';
+                  if (alert.type === 'warning') iconColor = 'text-yellow-500';
+                  if (alert.type === 'success') iconColor = 'text-green-500';
+                  if (alert.type === 'error') iconColor = 'text-red-500';
+                  
+                  return (
+                    <div key={index} className={`flex items-start gap-3 ${index < dashboardData.alerts.length - 1 ? 'pb-3 border-b' : ''}`}>
+                      <AlertCircle className={`h-5 w-5 ${iconColor} mt-0.5 flex-shrink-0`} />
+                      <div>
+                        <p className="text-sm font-medium">{alert.title}</p>
+                        <p className="text-xs text-muted-foreground">{alert.message}</p>
+                        <p className="text-xs text-muted-foreground mt-1">{alert.time}</p>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-              
-              <div className="flex items-start gap-3">
-                <AlertCircle className="h-5 w-5 text-blue-500 mt-0.5 flex-shrink-0" />
-                <div>
-                  <p className="text-sm font-medium">New Regulatory Notice</p>
-                  <p className="text-xs text-muted-foreground">CMSA published new guidelines for broker reporting</p>
-                  <p className="text-xs text-muted-foreground mt-1">Yesterday</p>
-                </div>
-              </div>
-            </div>
+            )}
           </CardContent>
           <CardFooter className="border-t pt-4">
             <Button variant="outline" size="sm" className="w-full gap-1">

@@ -29,7 +29,7 @@ export default function LoginForm() {
   return (
     <div className="flex min-h-screen items-center justify-center">
       <Card className="w-full max-w-md p-6">
-        <h2 className="text-2xl font-bold mb-6 text-center">Login to WebTrader</h2>
+        <h2 className="text-2xl font-bold mb-6 text-center">Login to Kelsoko Terminal</h2>
         {error && (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
             {error}
