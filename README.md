@@ -1,4 +1,4 @@
-# Terminal1 - Next.js Trading Platform
+# Kelsoko Terminal - Next.js Trading Platform
 
 A modern trading platform built with Next.js, PostgreSQL, Redis, and deployed on AWS EC2.
 
@@ -38,7 +38,7 @@ The application uses GitHub Actions for continuous deployment:
 ssh ubuntu@your-ec2-ip
 
 # Navigate to the project directory
-cd ~/terminal1
+cd ~/kelsoko
 
 # Pull the latest changes
 git pull origin main
@@ -56,7 +56,7 @@ npx prisma migrate deploy
 npm run build
 
 # Restart the application
-pm2 restart nextjs-app || pm2 start ecosystem.config.js
+pm2 restart kelsoko-terminal || pm2 start ecosystem.config.js
 ```
 
 ## Environment Configuration
@@ -69,7 +69,7 @@ NODE_ENV=production
 NEXT_PUBLIC_APP_URL=https://kelsoko.org
 
 # Database
-DATABASE_URL=postgresql://postgres:password@localhost:5432/webtrader
+DATABASE_URL=postgresql://postgres:password@localhost:5432/terminaldb
 
 # Redis
 REDIS_HOST=localhost
@@ -95,7 +95,7 @@ pm2 monit
 pm2 logs
 
 # Restart application
-pm2 restart nextjs-app
+pm2 restart kelsoko-terminal
 ```
 
 ### Database Maintenance
@@ -105,10 +105,10 @@ pm2 restart nextjs-app
 sudo -u postgres psql
 
 # Backup database
-pg_dump -U postgres webtrader > backup_$(date +%Y%m%d).sql
+pg_dump -U postgres terminaldb > backup_$(date +%Y%m%d).sql
 
 # Restore database
-psql -U postgres webtrader < backup_file.sql
+psql -U postgres terminaldb < backup_file.sql
 ```
 
 ## Troubleshooting
@@ -116,18 +116,18 @@ psql -U postgres webtrader < backup_file.sql
 ### Common Issues
 
 1. **Application not starting**:
-   - Check PM2 logs: `pm2 logs nextjs-app`
+   - Check PM2 logs: `pm2 logs kelsoko-terminal`
    - Verify Node.js version: `node -v` (should be v18+)
    - Check disk space: `df -h`
 
 2. **Database connection issues**:
    - Verify PostgreSQL is running: `sudo systemctl status postgresql`
    - Check database credentials in `.env`
-   - Test connection: `psql -U postgres -d webtrader -h localhost`
+   - Test connection: `psql -U postgres -d terminaldb -h localhost`
 
 3. **Performance issues**:
    - Monitor resource usage: `pm2 monit`
-   - Check for memory leaks: `pm2 reload nextjs-app`
+   - Check for memory leaks: `pm2 reload kelsoko-terminal`
    - Consider scaling up EC2 instance if needed
 
 ## Security

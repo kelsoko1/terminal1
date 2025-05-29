@@ -1,5 +1,5 @@
 {
-  "name": "terminal",
+  "name": "kelsoko",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -17,7 +17,10 @@
     "pm2:monit": "pm2 monit",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate deploy",
-    "setup:prod": "npm install --production && npm run prisma:generate && npm run prisma:migrate && npm run build"
+    "setup:prod": "npm install --production && npm run prisma:generate && npm run prisma:migrate && npm run build",
+    "deploy:prod": "node scripts/deploy-production.js",
+    "local:setup": "node scripts/generate-local-client.js",
+    "local:sync": "node -e \"require('./lib/database/localDatabase').syncAllModels()\""
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",
