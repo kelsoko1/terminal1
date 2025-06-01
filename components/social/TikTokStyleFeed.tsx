@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
 import './TikTokStyleFeed.css'
 import { Card } from '@/components/ui/card'
+import { Label } from '@/components/ui/label'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -13,49 +14,64 @@ import { useToast } from '@/components/ui/use-toast'
 import { v4 as uuidv4 } from 'uuid'
 // Streaming functionality
 import { useMediaStream } from '@/hooks/useMediaStream'
-import {
-  Heart,
-  MessageSquare,
-  Share2,
-  MoreHorizontal,
-  Users,
-  Clock,
-  ChevronUp,
-  ChevronDown,
-  Image as ImageIcon,
-  Bookmark,
-  Repeat,
-  Activity,
-  PenSquare,
-  Link,
-  AlertCircle,
-  Loader2,
-  Search,
-  RefreshCw,
+import { 
+  ShoppingBag, 
+  Package, 
+  Pencil, 
+  Trash2, 
+  MessageSquare, 
+  Heart, 
+  Share2, 
+  MoreHorizontal, 
+  Video, 
+  Mic, 
+  Image as ImageIcon, 
+  Link, 
+  ArrowUp, 
+  ArrowDown, 
+  MessageCircle, 
+  Bookmark, 
+  BookmarkCheck, 
+  ThumbsUp, 
+  ThumbsDown, 
+  Play, 
+  Pause, 
+  Volume2, 
+  VolumeX, 
+  AlertCircle, 
+  PenSquare, 
+  VideoOff, 
+  MicOff, 
+  Loader2, 
+  StopCircle, 
+  Clock, 
+  DollarSign, 
+  Search, 
+  RefreshCw, 
   Star,
-  ArrowUp,
-  ArrowDown,
-  Trash,
-  Video,
-  Mic,
-  MicOff,
-  VideoOff,
-  StopCircle
+  Trophy,
+  Plus,
+  ChevronUp,
+  MoreVertical,
+  Share
 } from 'lucide-react'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger, 
 } from '@/components/ui/dropdown-menu'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogTrigger,
+
+// Import the ecommerce context
+import { useEcommerce, Product } from '@/contexts/EcommerceContext'
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogDescription, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogFooter, 
+  DialogTrigger, 
 } from '@/components/ui/dialog'
 // Streaming functionality removed
 
@@ -68,6 +84,35 @@ interface Comment {
   content: string
   timestamp: string
   likes: number
+}
+
+// Challenge interface for Nerve-like functionality
+interface Challenge {
+  id: string
+  creatorId: string
+  creatorName: string
+  creatorAvatar: string
+  title: string
+  description: string
+  prizeAmount: number
+  difficulty: 'easy' | 'medium' | 'hard' | 'extreme'
+  timestamp: string
+  expiresAt: string
+  participants: number
+  status: 'active' | 'completed' | 'expired'
+  completedBy?: string[]
+  proofRequired: boolean
+  category: string
+}
+
+interface LeaderboardUser {
+  id: string
+  name: string
+  avatar: string
+  challengesCompleted: number
+  totalEarnings: number
+  rank: number
+  isWatcher: boolean
 }
 
 interface StatusUpdate {
@@ -383,7 +428,25 @@ async function fetchComments(postId: string): Promise<Comment[]> {
   }
 }
 
+import { ProductFeedSection } from '@/components/ecommerce/ProductFeedSection'
+import { ShopFeedSection } from '@/components/ecommerce/ShopFeedSection'
+
+// Format time remaining until expiration
+const formatTimeRemaining = (expiresAt: string) => {
+  const now = new Date();
+  const expiration = new Date(expiresAt);
+  const diffInSeconds = Math.floor((expiration.getTime() - now.getTime()) / 1000);
+  
+  if (diffInSeconds < 0) return 'Expired';
+  if (diffInSeconds < 60) return `${diffInSeconds}s`;
+  if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m`;
+  if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h`;
+  return `${Math.floor(diffInSeconds / 86400)}d`;
+};
+
 export function TikTokStyleFeed() {
+  // Use the ecommerce context
+  const { products, shops, featuredProducts, addProduct } = useEcommerce();
   // Removed tabs functionality
   const [statusUpdates, setStatusUpdates] = useState<StatusUpdate[]>([])
   const [isLoading, setIsLoading] = useState(false)
@@ -393,6 +456,18 @@ export function TikTokStyleFeed() {
   const [postContent, setPostContent] = useState('')
   const [isCreatingPost, setIsCreatingPost] = useState(false)
   const [showPostDialog, setShowPostDialog] = useState(false)
+  
+  // Soko product creation states
+  const [showProductDialog, setShowProductDialog] = useState(false)
+  const [isCreatingProduct, setIsCreatingProduct] = useState(false)
+  const [newProduct, setNewProduct] = useState<Partial<Product>>({
+    name: '',
+    price: 0,
+    stock: 0,
+    category: 'Digital Products',
+    status: 'active',
+    description: ''
+  })
   const [voteStatus, setVoteStatus] = useState<Record<string, 'upvoted' | 'downvoted' | 'none'>>({}) 
   const [activePostId, setActivePostId] = useState<string | null>(null)
   const [commentText, setCommentText] = useState('')
@@ -420,6 +495,8 @@ export function TikTokStyleFeed() {
   } = useMediaStream()
   
   const { toast } = useToast()
+  
+  // Toast notification hook
   
   // Handle starting a stream
   const handleStartStream = async (type: 'video' | 'audio') => {
@@ -1113,7 +1190,104 @@ export function TikTokStyleFeed() {
   }, [toast]);
   
   // Filter content based on selected content type
-  const [contentType, setContentType] = useState<'feeds' | 'video' | 'audio'>('feeds');
+  const [contentType, setContentType] = useState<'feeds' | 'video' | 'audio' | 'soko' | 'challenges'>('feeds');
+  
+  // State for leaderboard
+  const [leaderboard, setLeaderboard] = useState<LeaderboardUser[]>([
+    {
+      id: '1',
+      name: 'Sydney',
+      avatar: '/placeholder-avatar.jpg',
+      challengesCompleted: 12,
+      totalEarnings: 1250,
+      rank: 1,
+      isWatcher: false
+    },
+    {
+      id: '2',
+      name: 'Vee',
+      avatar: '/placeholder-avatar.jpg',
+      challengesCompleted: 10,
+      totalEarnings: 980,
+      rank: 2,
+      isWatcher: true
+    },
+    {
+      id: '3',
+      name: 'Tommy',
+      avatar: '/placeholder-avatar.jpg',
+      challengesCompleted: 8,
+      totalEarnings: 720,
+      rank: 3,
+      isWatcher: false
+    },
+    {
+      id: '4',
+      name: 'Current User',
+      avatar: '/placeholder-avatar.jpg',
+      challengesCompleted: 3,
+      totalEarnings: 175,
+      rank: 4,
+      isWatcher: false
+    }
+  ]);
+  
+  // State for challenges
+  const [challenges, setChallenges] = useState<Challenge[]>([]);
+  
+  // Load challenges from the challenge service
+  useEffect(() => {
+    const loadChallenges = async () => {
+      try {
+        const socialChallenges = await ChallengeService.getSocialChallenges();
+        // Convert social challenges to the Challenge format used in the component
+        const formattedChallenges = socialChallenges.map(sc => ({
+          id: sc.id,
+          creatorId: 'creator-id',
+          creatorName: 'Challenge Creator',
+          creatorAvatar: '/placeholder-avatar.jpg',
+          title: sc.title,
+          description: sc.description,
+          prizeAmount: sc.prizeAmount,
+          difficulty: sc.difficulty,
+          timestamp: sc.createdAt,
+          expiresAt: sc.expiresAt,
+          participants: sc.participants,
+          status: sc.status,
+          completedBy: sc.submissions.filter(s => s.status === 'approved').map(s => s.userId),
+          proofRequired: sc.proofRequired,
+          category: sc.category
+        }));
+        
+        setChallenges(formattedChallenges);
+      } catch (error) {
+        console.error('Error loading challenges:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to load challenges. Please try again.',
+          variant: 'destructive',
+        });
+      }
+    };
+    
+    loadChallenges();
+  }, [toast]);
+  
+  // State for challenge creation and interaction
+  const [showChallengeDialog, setShowChallengeDialog] = useState(false);
+  const [showAcceptDialog, setShowAcceptDialog] = useState(false);
+  const [currentChallenge, setCurrentChallenge] = useState<Challenge | null>(null);
+  const [newChallenge, setNewChallenge] = useState<Partial<Challenge>>({
+    title: '',
+    description: '',
+    prizeAmount: 50,
+    difficulty: 'medium',
+    proofRequired: true,
+    category: 'Performance'
+  });
+  const [isCreatingChallenge, setIsCreatingChallenge] = useState(false);
+  const [isAcceptingChallenge, setIsAcceptingChallenge] = useState(false);
+  const [proofContent, setProofContent] = useState('');
   
   const filteredStatusUpdates = useMemo(() => {
     if (contentType === 'feeds') {
@@ -1122,6 +1296,13 @@ export function TikTokStyleFeed() {
       return statusUpdates.filter(status => status.mediaType === 'video');
     } else if (contentType === 'audio') {
       return statusUpdates.filter(status => status.mediaType === 'audio');
+    } else if (contentType === 'challenges') {
+      // When in challenges tab, we'll show posts related to challenges
+      // but the actual challenges will be shown separately
+      return statusUpdates.filter(status => 
+        status.content.toLowerCase().includes('challenge') ||
+        status.content.toLowerCase().includes('#nerve')
+      );
     }
     return statusUpdates;
   }, [statusUpdates, contentType]);
@@ -1487,6 +1668,33 @@ export function TikTokStyleFeed() {
                         <Link className="h-3 w-3 mr-1" />
                         Link
                       </Button>
+
+                      {/* Soko product creation button */}
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="rounded-full h-7 text-xs bg-primary/10 text-primary hover:bg-primary/20"
+                        onClick={() => setShowProductDialog(true)}
+                        disabled={isStreamActive}
+                      >
+                        <ShoppingBag className="h-3 w-3 mr-1" />
+                        Soko Product
+                      </Button>
+                      
+                      {/* Challenges button - now opens challenge creation dialog */}
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="rounded-full h-7 text-xs bg-primary/10 text-primary hover:bg-primary/20"
+                        onClick={() => {
+                          setShowChallengeDialog(true);
+                          setShowPostDialog(false);
+                        }}
+                        disabled={isStreamActive}
+                      >
+                        <Star className="h-3 w-3 mr-1" />
+                        Challenge
+                      </Button>
                       
                       {/* Video streaming button */}
                       {!isStreamActive ? (
@@ -1575,6 +1783,583 @@ export function TikTokStyleFeed() {
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
+              
+              {/* Product Creation Dialog */}
+              <Dialog open={showProductDialog} onOpenChange={setShowProductDialog}>
+                <DialogContent className="sm:max-w-[500px] rounded-xl border-0 shadow-lg">
+                  <DialogHeader>
+                    <DialogTitle className="text-lg font-semibold">Create Soko Product</DialogTitle>
+                    <DialogDescription>
+                      Create a new product to sell in your Soko store
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="grid gap-4 py-3">
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="product-name" className="text-right">
+                        Name
+                      </Label>
+                      <Input
+                        id="product-name"
+                        value={newProduct.name}
+                        onChange={(e) => setNewProduct((prev: Partial<Product>) => ({ ...prev, name: e.target.value }))}
+                        className="col-span-3"
+                        placeholder="Product name"
+                      />
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="product-price" className="text-right">
+                        Price
+                      </Label>
+                      <div className="col-span-3 flex items-center">
+                        <DollarSign className="h-4 w-4 mr-1 text-muted-foreground" />
+                        <Input
+                          id="product-price"
+                          type="number"
+                          value={newProduct.price}
+                          onChange={(e) => setNewProduct((prev: Partial<Product>) => ({ ...prev, price: parseFloat(e.target.value) }))}
+                          className="flex-1"
+                          placeholder="0.00"
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="product-stock" className="text-right">
+                        Stock
+                      </Label>
+                      <Input
+                        id="product-stock"
+                        type="number"
+                        value={newProduct.stock}
+                        onChange={(e) => setNewProduct((prev: Partial<Product>) => ({ ...prev, stock: parseInt(e.target.value) }))}
+                        className="col-span-3"
+                        placeholder="0"
+                      />
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="product-category" className="text-right">
+                        Category
+                      </Label>
+                      <Input
+                        id="product-category"
+                        value={newProduct.category}
+                        onChange={(e) => setNewProduct((prev: Partial<Product>) => ({ ...prev, category: e.target.value }))}
+                        className="col-span-3"
+                        placeholder="Digital Products"
+                      />
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="product-status" className="text-right">
+                        Status
+                      </Label>
+                      <select
+                        id="product-status"
+                        value={newProduct.status}
+                        onChange={(e) => setNewProduct((prev: Partial<Product>) => ({ ...prev, status: e.target.value as 'active' | 'draft' | 'out-of-stock' }))}
+                        className="col-span-3 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <option value="active">Active</option>
+                        <option value="draft">Draft</option>
+                        <option value="out-of-stock">Out of Stock</option>
+                      </select>
+                    </div>
+                    <div className="grid grid-cols-4 items-start gap-4">
+                      <Label htmlFor="product-description" className="text-right pt-2">
+                        Description
+                      </Label>
+                      <Textarea
+                        id="product-description"
+                        value={newProduct.description || ''}
+                        onChange={(e) => setNewProduct((prev: Partial<Product>) => ({ ...prev, description: e.target.value }))}
+                        className="col-span-3"
+                        placeholder="Product description"
+                        rows={3}
+                      />
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => {
+                        setShowProductDialog(false);
+                        setNewProduct({
+                          name: '',
+                          price: 0,
+                          stock: 0,
+                          category: 'Digital Products',
+                          status: 'active',
+                          description: ''
+                        });
+                      }}
+                      className="h-8 text-xs"
+                    >
+                      Cancel
+                    </Button>
+                    <Button 
+                      size="sm"
+                      onClick={() => {
+                        setIsCreatingProduct(true);
+                        if (newProduct.name && newProduct.price !== undefined) {
+                          addProduct(newProduct as Omit<Product, 'id'>);
+                          setShowProductDialog(false);
+                          setPostContent(prev => {
+                            const productInfo = `Just created a new product: ${newProduct.name} - $${newProduct.price}\n`;
+                            return prev ? prev + '\n' + productInfo : productInfo;
+                          });
+                          toast({
+                            title: 'Product Created',
+                            description: `${newProduct.name} has been added to your Soko store`,
+                          });
+                          setNewProduct({
+                            name: '',
+                            price: 0,
+                            stock: 0,
+                            category: 'Digital Products',
+                            status: 'active',
+                            description: ''
+                          });
+                        } else {
+                          toast({
+                            title: 'Error',
+                            description: 'Product name and price are required',
+                            variant: 'destructive',
+                          });
+                        }
+                        setIsCreatingProduct(false);
+                      }}
+                      disabled={isCreatingProduct || !newProduct.name || newProduct.price === undefined}
+                      className="h-8 text-xs"
+                    >
+                      {isCreatingProduct ? (
+                        <>
+                          <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                          Creating...
+                        </>
+                      ) : 'Create Product'}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+              
+              {/* Challenge Creation Dialog */}
+              <Dialog open={showChallengeDialog} onOpenChange={setShowChallengeDialog}>
+                <DialogContent className="sm:max-w-[500px] rounded-xl border-0 shadow-lg">
+                  <DialogHeader>
+                    <DialogTitle className="text-lg font-semibold flex items-center gap-2">
+                      <Star className="h-5 w-5 text-yellow-500" />
+                      Create a NERVE Challenge
+                    </DialogTitle>
+                    <DialogDescription>
+                      Create a challenge with a cash prize for others to complete
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Avatar className="h-8 w-8 border border-muted">
+                        <AvatarImage src="/placeholder-avatar.jpg" alt="Your Avatar" />
+                        <AvatarFallback className="bg-primary/10 text-primary">YA</AvatarFallback>
+                      </Avatar>
+                      <span className="text-sm font-medium">Current User</span>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-4 gap-3 items-center">
+                        <Label htmlFor="challenge-title" className="text-sm">
+                          Title
+                        </Label>
+                        <Input
+                          id="challenge-title"
+                          className="col-span-3"
+                          placeholder="What's your challenge?"
+                          value={newChallenge.title}
+                          onChange={(e) => setNewChallenge(prev => ({ ...prev, title: e.target.value }))}
+                        />
+                      </div>
+                      
+                      <div className="grid grid-cols-4 gap-3 items-start">
+                        <Label htmlFor="challenge-description" className="text-sm">
+                          Description
+                        </Label>
+                        <Textarea
+                          id="challenge-description"
+                          className="col-span-3"
+                          placeholder="Describe what participants need to do"
+                          rows={3}
+                          value={newChallenge.description}
+                          onChange={(e) => setNewChallenge(prev => ({ ...prev, description: e.target.value }))}
+                        />
+                      </div>
+                      
+                      <div className="grid grid-cols-4 gap-3 items-center">
+                        <Label htmlFor="challenge-prize" className="text-sm">
+                          Prize Amount
+                        </Label>
+                        <div className="col-span-3 relative">
+                          <DollarSign className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
+                          <Input
+                            id="challenge-prize"
+                            type="number"
+                            min="5"
+                            step="5"
+                            className="pl-9"
+                            value={newChallenge.prizeAmount}
+                            onChange={(e) => setNewChallenge(prev => ({ ...prev, prizeAmount: parseInt(e.target.value) || 0 }))}
+                          />
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-4 gap-3 items-center">
+                        <Label htmlFor="challenge-difficulty" className="text-sm">
+                          Difficulty
+                        </Label>
+                        <div className="col-span-3">
+                          <div className="flex gap-2">
+                            {(['easy', 'medium', 'hard', 'extreme'] as const).map(level => (
+                              <Button 
+                                key={level}
+                                type="button"
+                                variant={newChallenge.difficulty === level ? 'default' : 'outline'}
+                                className={`flex-1 text-xs capitalize ${newChallenge.difficulty === level ? '' : 'text-muted-foreground'}`}
+                                onClick={() => setNewChallenge(prev => ({ ...prev, difficulty: level }))}
+                              >
+                                {level}
+                              </Button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-4 gap-3 items-center">
+                        <Label htmlFor="challenge-category" className="text-sm">
+                          Category
+                        </Label>
+                        <div className="col-span-3">
+                          <select
+                            id="challenge-category"
+                            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                            value={newChallenge.category}
+                            onChange={(e) => setNewChallenge(prev => ({ ...prev, category: e.target.value }))}
+                          >
+                            <option value="Performance">Performance</option>
+                            <option value="Physical">Physical</option>
+                            <option value="Food">Food</option>
+                            <option value="Social">Social</option>
+                            <option value="Skill">Skill</option>
+                            <option value="Other">Other</option>
+                          </select>
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-4 gap-3 items-center">
+                        <Label className="text-sm">
+                          Proof Required
+                        </Label>
+                        <div className="col-span-3 flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            id="challenge-proof"
+                            className="rounded border-gray-300 text-primary focus:ring-primary"
+                            checked={newChallenge.proofRequired}
+                            onChange={(e) => setNewChallenge(prev => ({ ...prev, proofRequired: e.target.checked }))}
+                          />
+                          <Label htmlFor="challenge-proof" className="text-sm font-normal">
+                            Require video/photo proof of completion
+                          </Label>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => {
+                        setShowChallengeDialog(false);
+                        setNewChallenge({
+                          title: '',
+                          description: '',
+                          prizeAmount: 50,
+                          difficulty: 'medium',
+                          proofRequired: true,
+                          category: 'Performance'
+                        });
+                      }}
+                      className="h-8 text-xs"
+                    >
+                      Cancel
+                    </Button>
+                    <Button 
+                      size="sm"
+                      className="h-8 text-xs bg-gradient-to-r from-yellow-500 to-red-500 text-white hover:from-yellow-600 hover:to-red-600"
+                      onClick={async () => {
+                        setIsCreatingChallenge(true);
+                        if (newChallenge.title && newChallenge.description && newChallenge.prizeAmount) {
+                          // Create a new challenge using the challenge service
+                          try {
+                            const socialChallenge = {
+                              title: newChallenge.title,
+                              description: newChallenge.description || '',
+                              prizeAmount: newChallenge.prizeAmount || 50,
+                              difficulty: newChallenge.difficulty || 'medium',
+                              expiresAt: new Date(Date.now() + 604800000).toISOString(), // 7 days from now
+                              proofRequired: newChallenge.proofRequired !== false,
+                              category: newChallenge.category || 'Performance',
+                              status: 'active'
+                            };
+                            
+                            // Create the challenge via the service
+                            const createdChallenge = await ChallengeService.createChallenge({...socialChallenge, type: 'social'});
+                            
+                            // Convert to UI challenge format
+                            const challenge = {
+                              id: createdChallenge.id,
+                              creatorId: 'current-user-id',
+                              creatorName: 'Current User',
+                              creatorAvatar: '/placeholder-avatar.jpg',
+                              title: createdChallenge.title,
+                              description: createdChallenge.description,
+                              prizeAmount: createdChallenge.prizeAmount,
+                              difficulty: createdChallenge.difficulty,
+                              timestamp: createdChallenge.createdAt,
+                              expiresAt: createdChallenge.expiresAt,
+                              participants: 0,
+                              status: createdChallenge.status,
+                              completedBy: [],
+                              proofRequired: createdChallenge.proofRequired,
+                              category: createdChallenge.category
+                            };
+                            
+                            // Add the challenge to the list
+                            setChallenges(prev => [challenge, ...prev]);
+                          
+                          // Create a post about the challenge
+                          setPostContent(`#NERVE I just created a new challenge: "${challenge.title}" with a $${challenge.prizeAmount} prize! Check it out in the Challenges tab.`);
+                          // We'll call handleCreatePost after setting the content
+                          setTimeout(() => {
+                            handleCreatePost();
+                          }, 100);
+                          
+                          // Reset the form and close the dialog
+                          setNewChallenge({
+                            title: '',
+                            description: '',
+                            prizeAmount: 50,
+                            difficulty: 'medium',
+                            proofRequired: true,
+                            category: 'Performance'
+                          });
+                          setShowChallengeDialog(false);
+                          
+                          // Show a toast
+                          toast({
+                            title: 'Challenge Created',
+                            description: `Your challenge "${newChallenge.title}" has been created with a $${newChallenge.prizeAmount} prize.`,
+                          });
+                          } catch (error) {
+                            console.error('Error creating challenge:', error);
+                            toast({
+                              title: 'Error',
+                              description: 'Failed to create challenge. Please try again.',
+                              variant: 'destructive',
+                            });
+                          }
+                          
+                          // Switch to challenges tab
+                          setContentType('challenges');
+                        } else {
+                          toast({
+                            title: 'Error',
+                            description: 'Please fill in all required fields',
+                            variant: 'destructive',
+                          });
+                        }
+                        setIsCreatingChallenge(false);
+                      }}
+                      disabled={isCreatingChallenge || !newChallenge.title || !newChallenge.description || !newChallenge.prizeAmount}
+                    >
+                      {isCreatingChallenge ? (
+                        <>
+                          <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                          Creating...
+                        </>
+                      ) : 'Create Challenge'}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+              
+              {/* Challenge Acceptance Dialog */}
+              <Dialog open={showAcceptDialog} onOpenChange={setShowAcceptDialog}>
+                <DialogContent className="sm:max-w-[500px] rounded-xl border-0 shadow-lg">
+                  <DialogHeader>
+                    <DialogTitle className="text-lg font-semibold flex items-center gap-2">
+                      <Star className="h-5 w-5 text-yellow-500" />
+                      Accept NERVE Challenge
+                    </DialogTitle>
+                    <DialogDescription>
+                      {currentChallenge ? (
+                        <span className="text-sm font-medium">"{currentChallenge.title}" - ${currentChallenge.prizeAmount} prize</span>
+                      ) : 'Accept a challenge and win cash prizes'}
+                    </DialogDescription>
+                  </DialogHeader>
+                  
+                  {currentChallenge && (
+                    <div className="space-y-4 py-3">
+                      <div className="p-3 bg-muted/30 rounded-lg">
+                        <p className="text-sm mb-2">{currentChallenge.description}</p>
+                        <div className="flex flex-wrap gap-2">
+                          <Badge variant="secondary" className="text-xs">{currentChallenge.category}</Badge>
+                          <Badge variant="secondary" className="text-xs">{currentChallenge.difficulty.charAt(0).toUpperCase() + currentChallenge.difficulty.slice(1)}</Badge>
+                          <Badge variant="secondary" className="text-xs">Expires in {formatTimeRemaining(currentChallenge.expiresAt)}</Badge>
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-sm font-medium">Challenge Rules</h3>
+                          <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 flex items-center gap-1">
+                            <DollarSign className="h-3 w-3" />
+                            ${currentChallenge.prizeAmount} Prize
+                          </Badge>
+                        </div>
+                        
+                        <ul className="text-xs space-y-2 list-disc pl-4">
+                          <li>Complete the challenge exactly as described</li>
+                          <li>Submit proof of completion (video/photo required)</li>
+                          <li>Prize will be awarded after verification</li>
+                          <li>Challenge must be completed before expiration</li>
+                          <li>By accepting, you agree to NERVE's terms and conditions</li>
+                        </ul>
+                        
+                        {currentChallenge.proofRequired && (
+                          <div className="mt-4">
+                            <Label htmlFor="proof-content" className="text-sm font-medium">
+                              Proof of Completion
+                            </Label>
+                            <div className="mt-2 space-y-2">
+                              <Textarea
+                                id="proof-content"
+                                placeholder="Describe how you'll complete this challenge..."
+                                className="min-h-[80px] text-sm"
+                                value={proofContent}
+                                onChange={(e) => setProofContent(e.target.value)}
+                              />
+                              <div className="flex items-center gap-2">
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  className="rounded-full h-7 text-xs w-full"
+                                >
+                                  <ImageIcon className="h-3 w-3 mr-1" />
+                                  Add Photo Proof
+                                </Button>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  className="rounded-full h-7 text-xs w-full"
+                                >
+                                  <Video className="h-3 w-3 mr-1" />
+                                  Add Video Proof
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  
+                  <DialogFooter>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => {
+                        setShowAcceptDialog(false);
+                        setCurrentChallenge(null);
+                        setProofContent('');
+                      }}
+                      className="h-8 text-xs"
+                    >
+                      Cancel
+                    </Button>
+                    <Button 
+                      size="sm"
+                      className="h-8 text-xs bg-gradient-to-r from-yellow-500 to-red-500 text-white hover:from-yellow-600 hover:to-red-600"
+                      onClick={async () => {
+                        if (!currentChallenge) return;
+                        
+                        setIsAcceptingChallenge(true);
+                        
+                        // Update the challenge with a new participant using the challenge service
+                        try {
+                          // Submit proof to the challenge
+                          const submission = {
+                            userId: 'current-user-id',
+                            userName: 'Current User',
+                            userAvatar: '/placeholder-avatar.jpg',
+                            proofContent: proofContent || 'Challenge accepted',
+                            proofMedia: undefined
+                          };
+                          
+                          // Submit the proof via the service
+                          await ChallengeService.submitChallengeProof(currentChallenge.id, submission);
+                          
+                          // Update the local state
+                          setChallenges(prev => 
+                            prev.map(challenge => {
+                              if (challenge.id === currentChallenge.id) {
+                                return {
+                                  ...challenge,
+                                  participants: challenge.participants + 1
+                                };
+                              }
+                              return challenge;
+                            })
+                          );
+                        } catch (error) {
+                          console.error('Error submitting challenge proof:', error);
+                          toast({
+                            title: 'Error',
+                            description: 'Failed to submit challenge proof. Please try again.',
+                            variant: 'destructive',
+                          });
+                        }
+                        
+                        // Create a post about accepting the challenge
+                        setPostContent(`#NERVE I just accepted the "${currentChallenge.title}" challenge for $${currentChallenge.prizeAmount}! Watch me complete it! 🔥`);
+                        
+                        // We'll call handleCreatePost after setting the content
+                        setTimeout(() => {
+                          handleCreatePost();
+                        }, 100);
+                        
+                        // Show a toast
+                        toast({
+                          title: 'Challenge Accepted',
+                          description: `You've accepted "${currentChallenge.title}". Good luck!`,
+                        });
+                        
+                        // Reset and close dialog
+                        setShowAcceptDialog(false);
+                        setCurrentChallenge(null);
+                        setProofContent('');
+                        setIsAcceptingChallenge(false);
+                        
+                        // Switch to challenges tab
+                        setContentType('challenges');
+                      }}
+                      disabled={isAcceptingChallenge || !currentChallenge}
+                    >
+                      {isAcceptingChallenge ? (
+                        <>
+                          <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                          Accepting...
+                        </>
+                      ) : 'Accept Challenge'}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             </div>
             
             {/* Content Type Filtering */}
@@ -1604,12 +2389,200 @@ export function TikTokStyleFeed() {
                   <Mic className="h-3.5 w-3.5 mr-1.5" />
                   Audio
                 </Button>
+                <Button 
+                  variant="ghost" 
+                  className={`px-3 py-1 sm:px-4 sm:py-2 h-auto rounded-full text-xs sm:text-sm font-medium ${contentType === 'soko' ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:bg-muted'} touch-manipulation`}
+                  onClick={() => setContentType('soko')}
+                >
+                  <ShoppingBag className="h-3.5 w-3.5 mr-1.5" />
+                  Soko
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  className={`px-3 py-1 sm:px-4 sm:py-2 h-auto rounded-full text-xs sm:text-sm font-medium ${contentType === 'challenges' ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:bg-muted'} touch-manipulation`}
+                  onClick={() => setContentType('challenges')}
+                >
+                  <Star className="h-3.5 w-3.5 mr-1.5" />
+                  Challenges
+                </Button>
               </div>
             </div>
             
             <div className="space-y-4 md:space-y-6 mobile-bottom-safe">
-            {/* Empty State for filtered content */}
-            {filteredStatusUpdates.length === 0 && (
+            {/* E-commerce sections - only shown when soko tab is selected */}
+            {contentType === 'soko' && (
+              <>
+                {/* Product Feed Section */}
+                <ProductFeedSection />
+                
+                {/* Shop Feed Section - Tiny Bar */}
+                <ShopFeedSection />
+              </>
+            )}
+            
+            {/* Challenges section - only shown when challenges tab is selected */}
+            {contentType === 'challenges' && (
+              <div className="space-y-6">
+                <div className="flex justify-between items-center mb-2">
+                  <h2 className="text-lg font-semibold flex items-center gap-1.5">
+                    <Star className="h-4 w-4 text-yellow-500" />
+                    Active Challenges
+                  </h2>
+                  <Button 
+                    size="sm" 
+                    className="h-8 text-xs rounded-full px-3 bg-gradient-to-r from-yellow-500 to-red-500 text-white hover:from-yellow-600 hover:to-red-600"
+                    onClick={() => setShowChallengeDialog(true)}
+                  >
+                    <Plus className="h-3 w-3 mr-1" />
+                    Create Challenge
+                  </Button>
+                </div>
+                
+                {/* NERVE Leaderboard */}
+                <div className="mb-6 bg-gradient-to-r from-yellow-500/10 to-red-500/10 rounded-lg p-4">
+                  <div className="flex justify-between items-center mb-3">
+                    <h3 className="text-sm font-semibold flex items-center gap-1.5">
+                      <Trophy className="h-4 w-4 text-yellow-500" />
+                      NERVE Leaderboard
+                    </h3>
+                    <Badge variant="outline" className="text-xs bg-black/10 dark:bg-white/5">
+                      Top Players
+                    </Badge>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    {leaderboard.map((user) => (
+                      <div key={user.id} className="flex items-center justify-between bg-background/60 backdrop-blur-sm rounded-md p-2">
+                        <div className="flex items-center gap-2">
+                          <div className="flex items-center justify-center w-5 h-5 rounded-full bg-muted text-xs font-bold">
+                            {user.rank}
+                          </div>
+                          <Avatar className="h-6 w-6 border border-muted">
+                            <AvatarImage src={user.avatar} alt={user.name} />
+                            <AvatarFallback>{user.name.substring(0, 2)}</AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="text-xs font-medium flex items-center gap-1">
+                              {user.name}
+                              {user.isWatcher && (
+                                <Badge variant="outline" className="text-[10px] h-4 bg-blue-500/10 text-blue-500 border-blue-500/20">
+                                  Watcher
+                                </Badge>
+                              )}
+                            </p>
+                            <p className="text-[10px] text-muted-foreground">
+                              {user.challengesCompleted} challenges completed
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-xs font-semibold text-primary flex items-center gap-1">
+                          <DollarSign className="h-3 w-3" />
+                          {user.totalEarnings}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  <div className="mt-3 flex justify-center">
+                    <Button variant="ghost" size="sm" className="text-xs h-7 w-full">
+                      View Full Leaderboard
+                    </Button>
+                  </div>
+                </div>
+                
+                {challenges.length === 0 ? (
+                  <div className="text-center py-12">
+                    <div className="inline-flex items-center justify-center h-16 w-16 rounded-full bg-muted mb-4">
+                      <Star className="h-8 w-8 text-muted-foreground" />
+                    </div>
+                    <h3 className="text-lg font-medium mb-2">No challenges found</h3>
+                    <p className="text-muted-foreground text-sm max-w-md mx-auto">
+                      Be the first to create a NERVE challenge with a cash prize!
+                    </p>
+                    <Button
+                      className="mt-4 bg-gradient-to-r from-yellow-500 to-red-500 text-white hover:from-yellow-600 hover:to-red-600"
+                      onClick={() => setShowChallengeDialog(true)}
+                    >
+                      <DollarSign className="h-4 w-4 mr-2" />
+                      Create a Challenge
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 gap-4">
+                    {challenges.map(challenge => (
+                      <Card key={challenge.id} className="overflow-hidden border-2 hover:border-primary/50 transition-all duration-200">
+                        <div className="flex flex-col md:flex-row">
+                          <div className={`w-full md:w-2 ${challenge.difficulty === 'easy' ? 'bg-green-500' : challenge.difficulty === 'medium' ? 'bg-yellow-500' : challenge.difficulty === 'hard' ? 'bg-orange-500' : 'bg-red-500'}`}></div>
+                          <div className="flex-1 p-4">
+                            <div className="flex justify-between items-start mb-2">
+                              <div className="flex items-center gap-2">
+                                <Avatar className="h-8 w-8 border-2 border-primary">
+                                  <AvatarImage src={challenge.creatorAvatar} alt={challenge.creatorName} />
+                                  <AvatarFallback>{challenge.creatorName.charAt(0)}</AvatarFallback>
+                                </Avatar>
+                                <div>
+                                  <h3 className="font-bold text-base">{challenge.title}</h3>
+                                  <p className="text-xs text-muted-foreground">by {challenge.creatorName} • {formatRelativeTime(challenge.timestamp)}</p>
+                                </div>
+                              </div>
+                              <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 flex items-center gap-1">
+                                <DollarSign className="h-3 w-3" />
+                                ${challenge.prizeAmount}
+                              </Badge>
+                            </div>
+                            
+                            <p className="text-sm mb-3">{challenge.description}</p>
+                            
+                            <div className="flex flex-wrap gap-2 mb-3">
+                              <Badge variant="secondary" className="text-xs">{challenge.category}</Badge>
+                              <Badge variant="secondary" className="text-xs">{challenge.difficulty.charAt(0).toUpperCase() + challenge.difficulty.slice(1)}</Badge>
+                              <Badge variant="secondary" className="text-xs">{challenge.participants} participants</Badge>
+                              <Badge variant="secondary" className="text-xs">Expires in {formatTimeRemaining(challenge.expiresAt)}</Badge>
+                            </div>
+                            
+                            <div className="flex justify-between items-center mt-2">
+                              <div className="flex items-center gap-2">
+                                {challenge.completedBy && challenge.completedBy.length > 0 && (
+                                  <div className="flex -space-x-2">
+                                    {[...Array(Math.min(3, challenge.completedBy.length))].map((_, i) => (
+                                      <Avatar key={i} className="h-6 w-6 border-2 border-background">
+                                        <AvatarFallback className="text-[10px] bg-primary/10">U{i+1}</AvatarFallback>
+                                      </Avatar>
+                                    ))}
+                                    {challenge.completedBy.length > 3 && (
+                                      <div className="h-6 w-6 rounded-full bg-muted flex items-center justify-center text-xs">+{challenge.completedBy.length - 3}</div>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                              <Button 
+                                size="sm" 
+                                className="bg-gradient-to-r from-yellow-500 to-red-500 text-white hover:from-yellow-600 hover:to-red-600"
+                                onClick={() => {
+                                  setCurrentChallenge(challenge);
+                                  setShowAcceptDialog(true);
+                                }}
+                              >
+                                Accept Challenge
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+                
+                {filteredStatusUpdates.length > 0 && (
+                  <div className="mt-8">
+                    <h3 className="text-base font-medium mb-4">Challenge Updates</h3>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Empty State for filtered content - only shown for non-soko and non-challenges tabs with no content */}
+            {filteredStatusUpdates.length === 0 && contentType !== 'soko' && contentType !== 'challenges' && (
               <div className="text-center py-12">
                 <div className="inline-flex items-center justify-center h-16 w-16 rounded-full bg-muted mb-4">
                   {contentType === 'video' ? (
@@ -1767,7 +2740,7 @@ export function TikTokStyleFeed() {
                               });
                             }}
                           >
-                            <Trash className="h-3.5 w-3.5 mr-2" />
+                            <Trash2 className="h-3.5 w-3.5 mr-2" />
                             Delete Post
                           </DropdownMenuItem>
                         </DropdownMenuContent>

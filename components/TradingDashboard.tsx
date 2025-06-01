@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useStore } from '@/lib/store';
 import { Button } from '@/components/ui/button';
+import { formatCurrency } from '@/lib/utils/currency';
 import {
   Card,
   CardContent,
@@ -41,7 +42,7 @@ export default function TradingDashboard() {
       <Card>
         <CardHeader>
           <CardTitle>DSE Trading Dashboard</CardTitle>
-          <CardDescription>Balance: TZS {user.balance.toFixed(2)}</CardDescription>
+          <CardDescription>Balance: {formatCurrency(user.balance)}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
@@ -53,7 +54,7 @@ export default function TradingDashboard() {
                 <div>
                   <h3 className="font-semibold">{stock.symbol}</h3>
                   <p className="text-sm text-muted-foreground">
-                    TZS {stock.price.toFixed(2)}
+                    {formatCurrency(stock.price)}
                   </p>
                 </div>
                 <div className="space-x-2">

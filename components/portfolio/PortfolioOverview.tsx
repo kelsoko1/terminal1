@@ -31,20 +31,20 @@ const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8']
 
 export default function PortfolioOverview() {
   return (
-    <div className="space-y-6">
-      <Card className="p-6">
-        <div className="flex justify-between items-start mb-6">
-          <div>
-            <h2 className="text-lg font-semibold">Portfolio Overview</h2>
-            <p className="text-muted-foreground">Total Value: TZS 505,500</p>
+    <div className="space-y-4 md:space-y-6">
+      <Card className="p-4 md:p-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 md:mb-6">
+          <div className="mb-2 sm:mb-0">
+            <h2 className="text-base md:text-lg font-semibold">Portfolio Overview</h2>
+            <p className="text-sm md:text-base text-muted-foreground">Total Value: TZS 505,500</p>
           </div>
-          <div className="text-right">
-            <div className="text-green-600">+1.2%</div>
-            <div className="text-sm text-muted-foreground">Today's Change</div>
+          <div className="flex items-center sm:text-right bg-muted/20 px-3 py-1 rounded-full sm:bg-transparent sm:p-0">
+            <div className="text-green-600 font-medium">+12%</div>
+            <div className="text-xs md:text-sm text-muted-foreground ml-2">Today's Change</div>
           </div>
         </div>
 
-        <div className="h-[300px]">
+        <div className="h-[220px] md:h-[300px]">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
@@ -52,40 +52,47 @@ export default function PortfolioOverview() {
                 cx="50%"
                 cy="50%"
                 labelLine={false}
-                outerRadius={100}
+                outerRadius="80%"
+                innerRadius="0%"
                 fill="#8884d8"
                 dataKey="value"
-                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                label={({ name, percent }) => {
+                  // On small screens, only show percentage for smaller segments
+                  const value = (percent * 100).toFixed(0);
+                  return window.innerWidth < 768 && percent < 0.15 ? `${value}%` : `${name} ${value}%`;
+                }}
               >
                 {assetData.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>
               <Tooltip formatter={(value) => [`${value}%`, 'Allocation']} />
-              <Legend />
+              <Legend layout="horizontal" verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: '12px' }} />
             </PieChart>
           </ResponsiveContainer>
         </div>
       </Card>
 
       <Tabs defaultValue="fx" className="w-full">
-        <TabsList>
-          <TabsTrigger value="fx">FX Positions</TabsTrigger>
-          <TabsTrigger value="commodities">Commodities</TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto -mx-4 px-4">
+          <TabsList className="w-auto min-w-fit">
+            <TabsTrigger value="fx" className="px-3 md:px-4">FX Positions</TabsTrigger>
+            <TabsTrigger value="commodities" className="px-3 md:px-4">Commodities</TabsTrigger>
+          </TabsList>
+        </div>
 
-        <TabsContent value="fx" className="mt-4">
-          <Card className="p-6">
-            <h3 className="text-lg font-semibold mb-4">FX Portfolio</h3>
-            <div className="space-y-4">
+        <TabsContent value="fx" className="mt-3 md:mt-4">
+          <Card className="p-3 md:p-6">
+            <h3 className="text-base md:text-lg font-semibold mb-3 md:mb-4">FX Portfolio</h3>
+            <div className="space-y-2 md:space-y-4">
               {fxData.map((item, index) => (
-                <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+                <div key={index} className="flex items-center justify-between p-2 md:p-3 border rounded-lg">
                   <div>
-                    <h4 className="font-medium">{item.name}</h4>
-                    <p className="text-sm text-muted-foreground">{item.value}% of portfolio</p>
+                    <h4 className="text-sm md:text-base font-medium">{item.name}</h4>
+                    <p className="text-xs md:text-sm text-muted-foreground">{item.value}% of portfolio</p>
                   </div>
                   <div className="flex items-center">
-                    <Badge className={item.change >= 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}>
+                    <Badge className={`text-xs md:text-sm ${item.change >= 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                       {item.change >= 0 ? (
                         <TrendingUp className="h-3 w-3 mr-1" />
                       ) : (
@@ -100,18 +107,18 @@ export default function PortfolioOverview() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="commodities" className="mt-4">
-          <Card className="p-6">
-            <h3 className="text-lg font-semibold mb-4">Commodity Holdings</h3>
-            <div className="space-y-4">
+        <TabsContent value="commodities" className="mt-3 md:mt-4">
+          <Card className="p-3 md:p-6">
+            <h3 className="text-base md:text-lg font-semibold mb-3 md:mb-4">Commodities Portfolio</h3>
+            <div className="space-y-2 md:space-y-4">
               {commodityData.map((item, index) => (
-                <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+                <div key={index} className="flex items-center justify-between p-2 md:p-3 border rounded-lg">
                   <div>
-                    <h4 className="font-medium">{item.name}</h4>
-                    <p className="text-sm text-muted-foreground">{item.value}% of portfolio</p>
+                    <h4 className="text-sm md:text-base font-medium">{item.name}</h4>
+                    <p className="text-xs md:text-sm text-muted-foreground">{item.value}% of portfolio</p>
                   </div>
                   <div className="flex items-center">
-                    <Badge className={item.change >= 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}>
+                    <Badge className={`text-xs md:text-sm ${item.change >= 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                       {item.change >= 0 ? (
                         <TrendingUp className="h-3 w-3 mr-1" />
                       ) : (

@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { formatCurrency } from '@/lib/utils/currency'
 
 interface Transaction {
   id: string
@@ -127,8 +128,8 @@ export default function TransactionHistory() {
             <TableHead>Symbol</TableHead>
             <TableHead>Type</TableHead>
             <TableHead>Quantity</TableHead>
-            <TableHead>Price (TZS)</TableHead>
-            <TableHead>Total (TZS)</TableHead>
+            <TableHead>Price</TableHead>
+            <TableHead>Total</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Actions</TableHead>
           </TableRow>
@@ -145,8 +146,8 @@ export default function TransactionHistory() {
                 </Badge>
               </TableCell>
               <TableCell>{transaction.quantity.toLocaleString()}</TableCell>
-              <TableCell>{transaction.price.toLocaleString()}</TableCell>
-              <TableCell>{(transaction.quantity * transaction.price).toLocaleString()}</TableCell>
+              <TableCell>{formatCurrency(transaction.price)}</TableCell>
+              <TableCell>{formatCurrency(transaction.quantity * transaction.price)}</TableCell>
               <TableCell>
                 <Badge 
                   variant={

@@ -6,6 +6,13 @@ import { PrismaClient as PrismaClientRemote } from '@prisma/client';
 type ExtendedPrismaClient = PrismaClientRemote & {
   syncLog: any;
   $queryRaw: any;
+  commodityFuture: any;
+  fxFuture: any;
+  fxExpiryDate: any;
+  futureOrder: any;
+  futureTrade: any;
+  fxFutureOrder: any;
+  fxFutureTrade: any;
 };
 
 // Prevent multiple instances of Prisma Client in development

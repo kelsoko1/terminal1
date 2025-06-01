@@ -55,17 +55,7 @@ export function Header() {
       <div className="mobile-container flex h-14 sm:h-16 items-center justify-between">
         {/* Left Section */}
         <div className="flex items-center gap-4">
-          {isAuthenticated && (
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={() => setMenuOpen(true)}
-              className="lg:hidden touch-manipulation"
-              aria-label="Open menu"
-            >
-              <Menu className="h-6 w-6" />
-            </Button>
-          )}
+          {/* Mobile menu button removed as we now have bottom navigation */}
           
           <Link href="/" className="flex items-center gap-2">
             <BarChart2 className="h-6 w-6 text-primary" />
@@ -158,7 +148,7 @@ export function Header() {
 
       {/* Mobile Menu */}
       {menuOpen && (
-        <div className="fixed inset-0 z-50 bg-background safe-area-inset safe-area-bottom">
+        <div className="fixed inset-0 z-50 bg-background safe-area-inset safe-area-bottom mobile-menu-overlay">
           <div className="flex flex-col h-full">
             <div className="flex items-center justify-between p-4 border-b safe-area-top">
               <div className="flex items-center gap-2">

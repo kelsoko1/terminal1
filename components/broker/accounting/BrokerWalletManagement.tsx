@@ -1,11 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { formatCurrency } from '@/lib/utils/currency'
 import {
   Table,
   TableBody,
@@ -44,8 +45,10 @@ import { useForm } from 'react-hook-form'
 import * as z from 'zod'
 import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
-import { Search, Plus, FileText, ArrowUpRight, CheckCircle, AlertCircle, Clock, Wallet, Upload } from 'lucide-react'
+import { Search, Plus, FileText, ArrowUpRight, CheckCircle, AlertCircle, Clock, Wallet, Upload, RefreshCw } from 'lucide-react'
 import { useBrokerWalletStore } from '@/lib/store/brokerWalletStore'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 
 // Form schema for new deposit
 const depositFormSchema = z.object({
@@ -68,12 +71,23 @@ export function BrokerWalletManagement() {
     totalDeposits, 
     totalDisbursements, 
     deposits, 
+    disbursements,
     lastDepositDate,
+    lastDisbursementDate,
+    isLoading,
+    error,
+    fetchBrokerWalletData,
     deposit
   } = useBrokerWalletStore()
   
   const [showNewDeposit, setShowNewDeposit] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  
+  // Fetch broker wallet data when component mounts
+  useEffect(() => {
+    fetchBrokerWalletData()
+  }, [])
   
   // Form for new deposit
   const form = useForm<z.infer<typeof depositFormSchema>>({
@@ -83,11 +97,18 @@ export function BrokerWalletManagement() {
     },
   })
 
-  function onSubmit(values: z.infer<typeof depositFormSchema>) {
-    // Add deposit to broker wallet
-    deposit(values.amount, values.method, values.reference)
-    setShowNewDeposit(false)
-    form.reset()
+  async function onSubmit(values: z.infer<typeof depositFormSchema>) {
+    try {
+      setIsSubmitting(true)
+      // Add deposit to broker wallet
+      await deposit(values.amount, values.method, values.reference, values.notes)
+      setShowNewDeposit(false)
+      form.reset()
+    } catch (error) {
+      console.error('Error submitting deposit:', error)
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   // Filter deposits based on search query
@@ -102,33 +123,75 @@ export function BrokerWalletManagement() {
     return new Date(dateString).toLocaleDateString()
   }
 
+  // Show error if there is one
+  if (error) {
+    return (
+      <Alert variant="destructive" className="mb-4">
+        <AlertDescription className="flex items-center justify-between">
+          <span>Error loading broker wallet data: {error}</span>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => fetchBrokerWalletData()}
+            className="ml-2"
+          >
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Retry
+          </Button>
+        </AlertDescription>
+      </Alert>
+    )
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">Broker Wallet Management</h2>
-        <Button onClick={() => setShowNewDeposit(true)}>
-          <Upload className="h-4 w-4 mr-2" />
-          New Deposit
-        </Button>
+        <div className="flex space-x-2">
+          <Button 
+            variant="outline" 
+            onClick={() => fetchBrokerWalletData()} 
+            disabled={isLoading}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+          <Button onClick={() => setShowNewDeposit(true)}>
+            <Upload className="h-4 w-4 mr-2" />
+            New Deposit
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
         <Card className="p-4">
           <h3 className="text-sm font-medium text-muted-foreground">Available Balance</h3>
-          <p className="text-2xl font-bold">TZS {balance.toLocaleString()}</p>
+          {isLoading ? (
+            <Skeleton className="h-8 w-24 my-1" />
+          ) : (
+            <p className="text-2xl font-bold">{formatCurrency(balance)}</p>
+          )}
           <p className="text-sm text-muted-foreground">For disbursements to clients</p>
         </Card>
         
         <Card className="p-4">
           <h3 className="text-sm font-medium text-muted-foreground">Total Deposits</h3>
-          <p className="text-2xl font-bold">TZS {totalDeposits.toLocaleString()}</p>
+          {isLoading ? (
+            <Skeleton className="h-8 w-24 my-1" />
+          ) : (
+            <p className="text-2xl font-bold">{formatCurrency(totalDeposits)}</p>
+          )}
           <p className="text-sm text-muted-foreground">Last: {formatDate(lastDepositDate)}</p>
         </Card>
         
         <Card className="p-4">
           <h3 className="text-sm font-medium text-muted-foreground">Total Disbursements</h3>
-          <p className="text-2xl font-bold">TZS {totalDisbursements.toLocaleString()}</p>
-          <p className="text-sm text-muted-foreground">To client wallets</p>
+          {isLoading ? (
+            <Skeleton className="h-8 w-24 my-1" />
+          ) : (
+            <p className="text-2xl font-bold">{formatCurrency(totalDisbursements)}</p>
+          )}
+          <p className="text-sm text-muted-foreground">Last: {formatDate(lastDisbursementDate)}</p>
         </Card>
       </div>
 
@@ -142,48 +205,141 @@ export function BrokerWalletManagement() {
         />
       </div>
 
-      <Card>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Date</TableHead>
-              <TableHead>Reference</TableHead>
-              <TableHead>Method</TableHead>
-              <TableHead>Amount</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredDeposits.length > 0 ? (
-              filteredDeposits.map((deposit) => (
-                <TableRow key={deposit.id}>
-                  <TableCell>{new Date(deposit.date).toLocaleDateString()}</TableCell>
-                  <TableCell className="font-medium">{deposit.reference}</TableCell>
-                  <TableCell>{deposit.method}</TableCell>
-                  <TableCell>TZS {deposit.amount.toLocaleString()}</TableCell>
-                  <TableCell>
-                    <Badge className="bg-green-100 text-green-800">
-                      <CheckCircle className="h-3 w-3 mr-1" /> {deposit.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="sm">
-                      <FileText className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
+      <Tabs defaultValue="deposits">
+        <TabsList>
+          <TabsTrigger value="deposits">Deposits</TabsTrigger>
+          <TabsTrigger value="disbursements">Disbursements</TabsTrigger>
+        </TabsList>
+        <TabsContent value="deposits" className="mt-4">
+          <Card>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Reference</TableHead>
+                  <TableHead>Method</TableHead>
+                  <TableHead>Amount</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center py-4">
-                  No deposits found. {searchQuery ? 'Try a different search term.' : 'Make your first deposit.'}
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </Card>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  Array(3).fill(0).map((_, index) => (
+                    <TableRow key={index}>
+                      <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                      <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
+                    </TableRow>
+                  ))
+                ) : filteredDeposits.length > 0 ? (
+                  filteredDeposits.map((deposit) => (
+                    <TableRow key={deposit.id}>
+                      <TableCell>{new Date(deposit.date).toLocaleDateString()}</TableCell>
+                      <TableCell className="font-medium">{deposit.reference}</TableCell>
+                      <TableCell>{deposit.method}</TableCell>
+                      <TableCell>{formatCurrency(deposit.amount)}</TableCell>
+                      <TableCell>
+                        <Badge className={`${deposit.status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                          {deposit.status === 'completed' ? (
+                            <CheckCircle className="h-3 w-3 mr-1" />
+                          ) : (
+                            <Clock className="h-3 w-3 mr-1" />
+                          )}
+                          {deposit.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="ghost" size="sm">
+                          <FileText className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-4">
+                      No deposits found. {searchQuery ? 'Try a different search term.' : 'Make your first deposit.'}
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </Card>
+        </TabsContent>
+        <TabsContent value="disbursements" className="mt-4">
+          <Card>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Date</TableHead>
+                  <TableHead>User</TableHead>
+                  <TableHead>Amount</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Notes</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  Array(3).fill(0).map((_, index) => (
+                    <TableRow key={index}>
+                      <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                      <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
+                    </TableRow>
+                  ))
+                ) : disbursements && disbursements.length > 0 ? (
+                  disbursements.map((disbursement) => (
+                    <TableRow key={disbursement.id}>
+                      <TableCell>{new Date(disbursement.date).toLocaleDateString()}</TableCell>
+                      <TableCell className="font-medium">{disbursement.userName}</TableCell>
+                      <TableCell>{formatCurrency(disbursement.amount)}</TableCell>
+                      <TableCell>
+                        <Badge className={`${
+                          disbursement.status === 'completed' ? 'bg-green-100 text-green-800' : 
+                          disbursement.status === 'processing' ? 'bg-blue-100 text-blue-800' : 
+                          disbursement.status === 'failed' ? 'bg-red-100 text-red-800' : 
+                          'bg-yellow-100 text-yellow-800'
+                        }`}>
+                          {disbursement.status === 'completed' ? (
+                            <CheckCircle className="h-3 w-3 mr-1" />
+                          ) : disbursement.status === 'processing' ? (
+                            <Clock className="h-3 w-3 mr-1" />
+                          ) : disbursement.status === 'failed' ? (
+                            <AlertCircle className="h-3 w-3 mr-1" />
+                          ) : (
+                            <Clock className="h-3 w-3 mr-1" />
+                          )}
+                          {disbursement.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="max-w-xs truncate">{disbursement.notes || '-'}</TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="ghost" size="sm">
+                          <FileText className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-4">
+                      No disbursements found.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       {/* New Deposit Dialog */}
       <Dialog open={showNewDeposit} onOpenChange={setShowNewDeposit}>
@@ -270,10 +426,19 @@ export function BrokerWalletManagement() {
                 )}
               />
               <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setShowNewDeposit(false)}>
+                <Button type="button" variant="outline" onClick={() => setShowNewDeposit(false)} disabled={isSubmitting}>
                   Cancel
                 </Button>
-                <Button type="submit">Submit Deposit</Button>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? (
+                    <>
+                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    'Submit Deposit'
+                  )}
+                </Button>
               </DialogFooter>
             </form>
           </Form>

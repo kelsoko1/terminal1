@@ -1,4 +1,5 @@
 import './globals.css';
+import '@/styles/mobile-investors.css';
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import { Header } from '@/components/Header';
@@ -7,6 +8,24 @@ import { ThemeProvider } from 'next-themes';
 import { Providers } from './providers';
 import { LanguageProvider } from '@/lib/language-context';
 import { ConnectionStatus } from '@/components/ConnectionStatus';
+import dynamic from 'next/dynamic';
+
+
+// Dynamically import components to avoid SSR issues
+const SubscriptionPrompt = dynamic(
+  () => import('@/components/subscription/SubscriptionPrompt'),
+  { ssr: false }
+);
+
+const SubscriptionInitializer = dynamic(
+  () => import('@/components/subscription/SubscriptionInitializer'),
+  { ssr: false }
+);
+
+const MobileNavigation = dynamic(
+  () => import('@/components/MobileNavigation').then(mod => ({ default: mod.MobileNavigation })),
+  { ssr: false }
+);
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -43,6 +62,9 @@ export default function RootLayout({
                 </div>
                 <main className="flex-1">{children}</main>
                 <Toaster />
+                <SubscriptionPrompt />
+                <SubscriptionInitializer />
+                <MobileNavigation />
               </div>
             </LanguageProvider>
           </ThemeProvider>

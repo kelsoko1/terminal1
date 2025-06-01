@@ -1,5 +1,7 @@
-import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
+import { v4 as uuidv4 } from 'uuid';
+import axios from 'axios';
 import { useBrokerWalletStore } from './brokerWalletStore'
 
 interface Transaction {
@@ -46,10 +48,13 @@ interface WalletStore {
   withdrawalRequests: WithdrawalRequest[]
   lastDepositDate: string | null
   lastWithdrawalDate: string | null
+  isLoading: boolean
+  error: string | null
   
   // Actions
-  deposit: (amount: number, method: string) => void
-  withdraw: (amount: number, method: string) => void
+  fetchWalletData: () => Promise<void>
+  deposit: (amount: number, method: string) => Promise<void>
+  withdraw: (amount: number, method: string, accountDetails?: string) => Promise<void>
   addTransaction: (transaction: Omit<Transaction, 'id' | 'date'>) => void
   initiateUSSDDeposit: (provider: string, phoneNumber: string, amount: number) => Promise<USSDResponse>
   initiateUSSDWithdraw: (provider: string, phoneNumber: string, amount: number) => Promise<USSDResponse>
@@ -58,62 +63,116 @@ interface WalletStore {
   checkAzamPesaTransactionStatus: (transactionId: string) => Promise<{success: boolean, status: string, message: string}>
   requestWithdrawal: (amount: number, paymentMethod: string, accountNumber: string, notes?: string) => Promise<{success: boolean, message: string, withdrawalId?: string}>
   getWithdrawalRequests: () => WithdrawalRequest[]
-  cancelWithdrawalRequest: (requestId: string) => Promise<{success: boolean, message: string}>
+  cancelWithdrawalRequest: (requestId: string) => Promise<void>
 }
-
-// Mock user data
-const MOCK_USER_ID = 'U1001';
-const MOCK_USER_NAME = 'John Makamba';
-const MOCK_WALLET_ID = 'W1001';
 
 export const useWalletStore = create<WalletStore>()(
   persist(
     (set, get) => ({
-      balance: 250000,
-      totalDeposits: 500000,
-      totalWithdrawals: 250000,
-      transactions: [
-        {
-          id: 'TX1001',
-          type: 'deposit',
-          method: 'mpesa',
-          amount: 500000,
-          status: 'completed',
-          date: new Date('2025-04-15T10:30:00Z').toISOString()
-        },
-        {
-          id: 'TX1002',
-          type: 'withdrawal',
-          method: 'mpesa',
-          amount: 250000,
-          status: 'completed',
-          date: new Date('2025-04-20T14:15:00Z').toISOString()
-        }
-      ],
+      balance: 0,
+      totalDeposits: 0,
+      totalWithdrawals: 0,
+      transactions: [],
       withdrawalRequests: [],
-      lastDepositDate: new Date('2025-04-15T10:30:00Z').toISOString(),
-      lastWithdrawalDate: new Date('2025-04-20T14:15:00Z').toISOString(),
-
-      deposit: (amount: number, method: string) => {
-        set((state) => ({
-          balance: state.balance + amount,
-          totalDeposits: state.totalDeposits + amount,
-          lastDepositDate: new Date().toISOString(),
-        }))
+      lastDepositDate: null,
+      lastWithdrawalDate: null,
+      isLoading: false,
+      error: null,
+      
+      fetchWalletData: async () => {
+        try {
+          set({ isLoading: true, error: null });
+          
+          // Fetch wallet data from API
+          const response = await axios.get('/api/wallet/transactions');
+          
+          if (response.status === 200) {
+            const { balance, totalDeposits, totalWithdrawals, transactions, withdrawalRequests, lastDepositDate, lastWithdrawalDate } = response.data;
+            
+            set({
+              balance,
+              totalDeposits,
+              totalWithdrawals,
+              transactions: transactions || [],
+              withdrawalRequests: withdrawalRequests || [],
+              lastDepositDate,
+              lastWithdrawalDate,
+              isLoading: false
+            });
+          } else {
+            throw new Error('Failed to fetch wallet data');
+          }
+        } catch (error) {
+          console.error('Error fetching wallet data:', error);
+          set({ 
+            isLoading: false, 
+            error: error instanceof Error ? error.message : 'An unknown error occurred' 
+          });
+        }
       },
-
-      withdraw: (amount: number, method: string) => {
-        set((state) => ({
-          balance: state.balance - amount,
-          totalWithdrawals: state.totalWithdrawals + amount,
-          lastWithdrawalDate: new Date().toISOString(),
-        }))
+      
+      deposit: async (amount, method) => {
+        try {
+          set({ isLoading: true, error: null });
+          
+          // Send deposit request to API
+          const response = await axios.post('/api/wallet/transactions', {
+            type: 'deposit',
+            amount,
+            method,
+            reference: `${method.toUpperCase()}-${Math.floor(Math.random() * 1000000)}`
+          });
+          
+          if (response.status === 201) {
+            // Refresh wallet data after successful deposit
+            await get().fetchWalletData();
+          } else {
+            throw new Error('Failed to process deposit');
+          }
+        } catch (error) {
+          console.error('Error processing deposit:', error);
+          set({ 
+            isLoading: false, 
+            error: error instanceof Error ? error.message : 'An unknown error occurred' 
+          });
+        }
       },
-
+      
+      withdraw: async (amount, method, accountDetails) => {
+        try {
+          if (amount > get().balance) {
+            throw new Error('Insufficient funds');
+          }
+          
+          set({ isLoading: true, error: null });
+          
+          // Send withdrawal request to API
+          const response = await axios.post('/api/wallet/transactions', {
+            type: 'withdrawal',
+            amount,
+            method,
+            accountDetails
+          });
+          
+          if (response.status === 201) {
+            // Refresh wallet data after successful withdrawal request
+            await get().fetchWalletData();
+          } else {
+            throw new Error('Failed to process withdrawal');
+          }
+        } catch (error) {
+          console.error('Error processing withdrawal:', error);
+          set({ 
+            isLoading: false, 
+            error: error instanceof Error ? error.message : 'An unknown error occurred' 
+          });
+        }
+      },
+      
       addTransaction: (transaction) => {
         const newTransaction: Transaction = {
           ...transaction,
-          id: crypto.randomUUID(),
+          id: uuidv4(),
           date: new Date().toISOString(),
         }
 
@@ -121,7 +180,7 @@ export const useWalletStore = create<WalletStore>()(
           transactions: [newTransaction, ...state.transactions],
         }))
       },
-
+      
       initiateUSSDDeposit: async (provider, phoneNumber, amount) => {
         // This would connect to your backend API in production
         const ussdCodes = {
@@ -145,7 +204,7 @@ export const useWalletStore = create<WalletStore>()(
           transactionId: 'TXN' + Date.now()
         }
       },
-
+      
       initiateUSSDWithdraw: async (provider, phoneNumber, amount) => {
         // In a production environment, this would create a withdrawal request
         // that would be processed by a broker

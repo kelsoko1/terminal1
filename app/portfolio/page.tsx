@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import '@/styles/portfolio-mobile.css'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import {
@@ -114,9 +115,9 @@ export default function PortfolioPage() {
   }
 
   return (
-    <div className="container mx-auto p-6">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold">Investment Portfolio</h1>
+    <div className="container mx-auto px-4 py-4 md:p-6 portfolio-page portfolio-container">
+      <div className="mb-4 md:mb-8">
+        <h1 className="text-2xl md:text-3xl font-bold">Investment Portfolio</h1>
       </div>
       
       <div className="space-y-8">
@@ -124,13 +125,14 @@ export default function PortfolioPage() {
         <Portfolio />
         
         <Tabs defaultValue="details" className="w-full">
-          <TabsList className="grid grid-cols-5 mb-6">
-            <TabsTrigger value="details">Portfolio Details</TabsTrigger>
-            <TabsTrigger value="comparison">Benchmark Comparison</TabsTrigger>
-            <TabsTrigger value="analytics">Analytics</TabsTrigger>
-            <TabsTrigger value="accounting">Accounting</TabsTrigger>
-            <TabsTrigger value="challenges">Challenges</TabsTrigger>
-          </TabsList>
+          <div className="overflow-x-auto pb-2 mb-2 -mx-4 px-4">
+            <TabsList className="inline-flex w-auto min-w-full md:grid md:grid-cols-4 mb-2 md:mb-6">
+              <TabsTrigger value="details" className="whitespace-nowrap px-3 md:px-4">Portfolio Details</TabsTrigger>
+              <TabsTrigger value="comparison" className="whitespace-nowrap px-3 md:px-4">Benchmark Comparison</TabsTrigger>
+              <TabsTrigger value="analytics" className="whitespace-nowrap px-3 md:px-4">Analytics</TabsTrigger>
+              <TabsTrigger value="accounting" className="whitespace-nowrap px-3 md:px-4">Accounting</TabsTrigger>
+            </TabsList>
+          </div>
           
           <TabsContent value="details">
             <PortfolioDetails onTradeClick={handleTradeClick} />
@@ -148,15 +150,7 @@ export default function PortfolioPage() {
             <AccountingSummary accountingData={accountingData} />
           </TabsContent>
 
-          <TabsContent value="challenges">
-            <div className="grid gap-6">
-              <TradingChallenges />
-              <div className="mt-6">
-                <h2 className="text-xl font-semibold mb-4">Top Traders Leaderboard</h2>
-                <CompetitionLeaderboard />
-              </div>
-            </div>
-          </TabsContent>
+
         </Tabs>
       </div>
       

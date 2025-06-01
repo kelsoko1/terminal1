@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { formatCurrency } from '@/lib/utils/currency'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
@@ -29,115 +30,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { RefreshCw } from 'lucide-react'
+import { useDSEBrokerStore, DSEBroker } from '@/lib/store/dseBrokerStore'
 
-interface DSEBroker {
-  id: string
-  name: string
-  code: string
-  minimumDeposit: number
-  tradingFees: number
-  services: string[]
-  features: {
-    onlineTrading: boolean
-    mobileApp: boolean
-    research: boolean
-    marginTrading: boolean
-    advisoryServices: boolean
-  }
-  ratings: {
-    execution: number
-    research: number
-    platform: number
-    support: number
-  }
-}
-
-const dseBrokers: DSEBroker[] = [
-  {
-    id: '1',
-    name: 'Vertex International Securities',
-    code: 'VERTEX',
-    minimumDeposit: 100000,
-    tradingFees: 1.1,
-    services: ['Online Trading', 'Research', 'Advisory', 'Margin Trading'],
-    features: {
-      onlineTrading: true,
-      mobileApp: true,
-      research: true,
-      marginTrading: true,
-      advisoryServices: true
-    },
-    ratings: {
-      execution: 4.5,
-      research: 4.2,
-      platform: 4.3,
-      support: 4.4
-    }
-  },
-  {
-    id: '2',
-    name: 'Tanzania Securities Limited',
-    code: 'TSL',
-    minimumDeposit: 50000,
-    tradingFees: 1.2,
-    services: ['Online Trading', 'Mobile Trading', 'Research', 'IPO Services'],
-    features: {
-      onlineTrading: true,
-      mobileApp: true,
-      research: true,
-      marginTrading: false,
-      advisoryServices: true
-    },
-    ratings: {
-      execution: 4.3,
-      research: 4.5,
-      platform: 4.1,
-      support: 4.6
-    }
-  },
-  {
-    id: '3',
-    name: 'Core Securities Limited',
-    code: 'CORE',
-    minimumDeposit: 75000,
-    tradingFees: 1.0,
-    services: ['Online Trading', 'Advisory', 'Portfolio Management', 'Corporate Trading'],
-    features: {
-      onlineTrading: true,
-      mobileApp: false,
-      research: true,
-      marginTrading: true,
-      advisoryServices: true
-    },
-    ratings: {
-      execution: 4.4,
-      research: 4.3,
-      platform: 4.2,
-      support: 4.3
-    }
-  },
-  {
-    id: '4',
-    name: 'Orbit Securities Company',
-    code: 'ORBIT',
-    minimumDeposit: 60000,
-    tradingFees: 1.15,
-    services: ['Online Trading', 'Research', 'Corporate Trading', 'Fixed Income'],
-    features: {
-      onlineTrading: true,
-      mobileApp: true,
-      research: true,
-      marginTrading: false,
-      advisoryServices: false
-    },
-    ratings: {
-      execution: 4.2,
-      research: 4.4,
-      platform: 4.3,
-      support: 4.2
-    }
-  }
-]
+// DSEBroker interface is now imported from the store
 
 const formSchema = z.object({
   broker: z.string().min(1, 'Please select a broker'),
@@ -194,14 +92,30 @@ function formatRating(rating: number): string {
 }
 
 export function DSESettings() {
-  const [selectedBroker, setSelectedBroker] = useState<string>('')
+  const { 
+    brokers, 
+    selectedBrokerId, 
+    isLoading, 
+    error, 
+    fetchBrokers, 
+    selectBroker,
+    updateBrokerSettings
+  } = useDSEBrokerStore()
+  
+  // Fetch brokers when component mounts
+  useEffect(() => {
+    fetchBrokers()
+  }, [])
+  
+  // Use the selectedBrokerId from the store
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       broker: '',
       csdNumber: '',
-      tradingLimit: '1000000',
+      tradingLimit: 1000000,
       accountType: 'individual',
       tradingPreferences: {
         defaultOrderType: 'limit',
@@ -210,8 +124,8 @@ export function DSESettings() {
         allowShortSelling: false,
       },
       riskManagement: {
-        stopLossPercentage: '10',
-        maxPositionSize: '1000000',
+        stopLossPercentage: 10,
+        maxPositionSize: 1000000,
       },
       notifications: {
         priceAlerts: true,
@@ -230,17 +144,61 @@ export function DSESettings() {
     }
   })
 
-  function onSubmit(data: FormValues) {
-    toast({
-      title: 'DSE Settings Updated',
-      description: 'Your DSE trading settings have been saved successfully.'
-    })
-    console.log(data)
+  async function onSubmit(data: FormValues) {
+    try {
+      setIsSubmitting(true)
+      await updateBrokerSettings(data)
+      toast({
+        title: 'DSE Settings Updated',
+        description: 'Your DSE trading settings have been saved successfully.'
+      })
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to update DSE settings. Please try again.',
+        variant: 'destructive'
+      })
+      console.error('Error updating DSE settings:', error)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  // Show error if there is one
+  if (error) {
+    return (
+      <Alert variant="destructive" className="mb-4">
+        <AlertDescription className="flex items-center justify-between">
+          <span>Error loading DSE brokers: {error}</span>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => fetchBrokers()}
+            className="ml-2"
+          >
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Retry
+          </Button>
+        </AlertDescription>
+      </Alert>
+    )
   }
 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-2xl font-bold">DSE Trading Settings</h2>
+          <Button 
+            variant="outline" 
+            onClick={() => fetchBrokers()} 
+            disabled={isLoading}
+            type="button"
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+        </div>
         <Tabs defaultValue="broker" className="w-full">
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="broker">Broker Selection</TabsTrigger>
@@ -259,26 +217,30 @@ export function DSESettings() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Select DSE Licensed Broker</FormLabel>
-                      <Select 
-                        onValueChange={(value) => {
-                          field.onChange(value)
-                          setSelectedBroker(value)
-                        }}
-                        value={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a broker" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {dseBrokers.map((broker) => (
-                            <SelectItem key={broker.id} value={broker.id}>
-                              {broker.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      {isLoading ? (
+                        <Skeleton className="h-10 w-full" />
+                      ) : (
+                        <Select 
+                          onValueChange={(value) => {
+                            field.onChange(value)
+                            selectBroker(value)
+                          }}
+                          value={field.value || selectedBrokerId || ''}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select a broker" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {brokers.map((broker) => (
+                              <SelectItem key={broker.id} value={broker.id}>
+                                {broker.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
                       <FormDescription>
                         Choose your preferred DSE licensed broker for trading
                       </FormDescription>
@@ -287,16 +249,23 @@ export function DSESettings() {
                   )}
                 />
 
-                {selectedBroker && (
+                {(selectedBrokerId || form.getValues('broker')) && (
                   <div className="mt-4 space-y-4">
                     <div className="p-4 bg-muted rounded-lg">
                       <h4 className="font-medium mb-2">Broker Details</h4>
-                      {dseBrokers.map((broker) => 
-                        broker.id === selectedBroker && (
+                      {isLoading ? (
+                        <div className="space-y-2">
+                          <Skeleton className="h-4 w-3/4" />
+                          <Skeleton className="h-4 w-1/2" />
+                          <Skeleton className="h-4 w-2/3" />
+                          <Skeleton className="h-4 w-full" />
+                        </div>
+                      ) : brokers.map((broker) => 
+                        broker.id === (selectedBrokerId || form.getValues('broker')) && (
                           <div key={broker.id} className="space-y-4">
                             <div className="space-y-2">
                               <p><span className="text-muted-foreground">Broker Code:</span> {broker.code}</p>
-                              <p><span className="text-muted-foreground">Minimum Deposit:</span> TZS {broker.minimumDeposit.toLocaleString()}</p>
+                              <p><span className="text-muted-foreground">Minimum Deposit:</span> {formatCurrency(broker.minimumDeposit)}</p>
                               <p><span className="text-muted-foreground">Trading Fees:</span> {broker.tradingFees}%</p>
                               <p><span className="text-muted-foreground">Services:</span> {broker.services.join(', ')}</p>
                             </div>
@@ -780,9 +749,18 @@ export function DSESettings() {
         </Tabs>
 
         <div className="flex justify-end">
-          <Button type="submit">Save DSE Settings</Button>
+              <Button type="submit" disabled={isSubmitting || isLoading}>
+                {isSubmitting ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  'Save DSE Settings'
+                )}
+              </Button>
         </div>
       </form>
     </Form>
   )
-} 
+}

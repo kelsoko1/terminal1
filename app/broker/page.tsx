@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ChallengeList } from '@/components/broker/challenges/ChallengeList'
 import { CreateChallengeForm } from '@/components/broker/challenges/CreateChallengeForm'
 import { ChallengeStats } from '@/components/broker/challenges/ChallengeStats'
+import { ChallengeManagement } from '@/components/broker/challenges/ChallengeManagement'
 import { BondManagement } from '@/components/broker/bonds/BondManagement'
 import { FundManagement } from '@/components/broker/funds/FundManagement'
 import { StockManagement } from '@/components/broker/stocks/StockManagement'
@@ -38,6 +39,7 @@ export default function BrokerBackOffice() {
   
   const [activeTab, setActiveTab] = useState('dashboard')
   const [showNewChallenge, setShowNewChallenge] = useState(false)
+  const [activeChallengeTab, setActiveChallengeTab] = useState('trading')
   const [activeHRTab, setActiveHRTab] = useState('staff')
 
   // Set active tab based on URL parameter
@@ -92,7 +94,7 @@ export default function BrokerBackOffice() {
           <TabsContent value="challenges">
             <div className="space-y-6">
               <div className="flex items-center justify-between">
-                <h1 className="text-3xl font-bold tracking-tight">Trading Challenges</h1>
+                <h1 className="text-3xl font-bold tracking-tight">Challenge Management</h1>
                 <Button 
                   onClick={() => setShowNewChallenge(true)}
                   className="ml-4"
@@ -124,46 +126,71 @@ export default function BrokerBackOffice() {
                     <CreateChallengeForm onSuccess={() => setShowNewChallenge(false)} />
                   </div>
                 ) : (
-                  <Tabs defaultValue="active" className="w-full">
+                  <Tabs value={activeChallengeTab} onValueChange={setActiveChallengeTab} className="w-full">
                     <div className="px-6 pt-6 border-b">
                       <TabsList className="bg-transparent border rounded-lg p-1">
                         <TabsTrigger 
-                          value="active"
+                          value="trading"
                           className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded"
                         >
-                          Active
+                          Legacy View
                         </TabsTrigger>
                         <TabsTrigger 
-                          value="draft"
+                          value="social"
                           className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded"
                         >
-                          Drafts
-                        </TabsTrigger>
-                        <TabsTrigger 
-                          value="completed"
-                          className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded"
-                        >
-                          Completed
+                          Unified Challenges
                         </TabsTrigger>
                       </TabsList>
                     </div>
 
-                    <TabsContent value="active" className="p-6">
-                      <ScrollArea className="h-[calc(100vh-320px)]">
-                        <ChallengeList status="Active" />
-                      </ScrollArea>
+                    <TabsContent value="trading" className="w-full">
+                      <Tabs defaultValue="active" className="w-full">
+                        <div className="px-6 pt-6 border-b">
+                          <TabsList className="bg-transparent border rounded-lg p-1">
+                            <TabsTrigger 
+                              value="active"
+                              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded"
+                            >
+                              Active
+                            </TabsTrigger>
+                            <TabsTrigger 
+                              value="draft"
+                              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded"
+                            >
+                              Drafts
+                            </TabsTrigger>
+                            <TabsTrigger 
+                              value="completed"
+                              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded"
+                            >
+                              Completed
+                            </TabsTrigger>
+                          </TabsList>
+                        </div>
+
+                        <TabsContent value="active" className="p-6">
+                          <ScrollArea className="h-[calc(100vh-380px)]">
+                            <ChallengeList status="Active" />
+                          </ScrollArea>
+                        </TabsContent>
+                        
+                        <TabsContent value="draft" className="p-6">
+                          <ScrollArea className="h-[calc(100vh-380px)]">
+                            <ChallengeList status="Draft" />
+                          </ScrollArea>
+                        </TabsContent>
+                        
+                        <TabsContent value="completed" className="p-6">
+                          <ScrollArea className="h-[calc(100vh-380px)]">
+                            <ChallengeList status="Completed" />
+                          </ScrollArea>
+                        </TabsContent>
+                      </Tabs>
                     </TabsContent>
                     
-                    <TabsContent value="draft" className="p-6">
-                      <ScrollArea className="h-[calc(100vh-320px)]">
-                        <ChallengeList status="Draft" />
-                      </ScrollArea>
-                    </TabsContent>
-                    
-                    <TabsContent value="completed" className="p-6">
-                      <ScrollArea className="h-[calc(100vh-320px)]">
-                        <ChallengeList status="Completed" />
-                      </ScrollArea>
+                    <TabsContent value="social" className="p-6">
+                      <ChallengeManagement />
                     </TabsContent>
                   </Tabs>
                 )}

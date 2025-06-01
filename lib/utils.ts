@@ -12,7 +12,7 @@ export function cn(...inputs: ClassValue[]) {
  * @param locale - The locale to use for formatting (default: en-US)
  * @returns Formatted currency string
  */
-export function formatCurrency(value: number, currency: string = 'USD', locale: string = 'en-US'): string {
+export function formatCurrency(value: number, currency: string = 'TZS', locale: string = 'sw-TZ'): string {
   return new Intl.NumberFormat(locale, {
     style: 'currency',
     currency,

@@ -1,5 +1,6 @@
-import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
+import axios from 'axios';
 
 interface BrokerDeposit {
   id: string
@@ -44,246 +45,211 @@ interface BrokerWalletStore {
   withdrawalRequests: WithdrawalRequest[]
   lastDepositDate: string | null
   lastDisbursementDate: string | null
-  
-  // Actions
-  deposit: (amount: number, method: string, reference: string) => void
-  disburseToUserWallet: (userId: string, userName: string, amount: number, notes?: string) => Promise<{ success: boolean; message: string; disbursementId?: string }>
-  updateDisbursementStatus: (disbursementId: string, status: 'completed' | 'pending' | 'processing' | 'failed') => void
-  getWithdrawalRequests: () => WithdrawalRequest[]
-  processWithdrawalRequest: (requestId: string, paymentMethod: string, notes?: string) => Promise<{ success: boolean; message: string; disbursementId?: string }>
-  addWithdrawalRequest: (request: Omit<WithdrawalRequest, 'id' | 'status' | 'requestDate'>) => string
+  isLoading: boolean
+  error: string | null
+  fetchBrokerWalletData: () => Promise<void>
+  deposit: (amount: number, method: string, reference: string, notes?: string) => Promise<void>
+  disburseToUserWallet: (userId: string, userName: string, amount: number, notes?: string) => Promise<void>
+  requestWithdrawal: (amount: number, method: string, accountDetails: string) => Promise<void>
+  approveWithdrawalRequest: (requestId: string) => Promise<void>
+  rejectWithdrawalRequest: (requestId: string) => Promise<void>
 }
-
-// Mock withdrawal requests data for initial state
-const initialWithdrawalRequests: WithdrawalRequest[] = [
-  {
-    id: 'W1001',
-    userId: 'U1001',
-    userName: 'John Makamba',
-    amount: 120000,
-    requestDate: '2025-04-25T14:30:00Z',
-    status: 'pending',
-    paymentMethod: 'mpesa',
-    accountNumber: '255712345678',
-    walletId: 'W1001'
-  },
-  {
-    id: 'W1002',
-    userId: 'U1002',
-    userName: 'Amina Hussein',
-    amount: 500000,
-    requestDate: '2025-04-26T09:15:00Z',
-    status: 'pending',
-    paymentMethod: 'azampesa',
-    accountNumber: '255787654321',
-    walletId: 'W1002'
-  },
-  {
-    id: 'W1003',
-    userId: 'U1003',
-    userName: 'Global Investments Ltd',
-    amount: 1500000,
-    requestDate: '2025-04-26T16:45:00Z',
-    status: 'pending',
-    paymentMethod: 'bank',
-    accountNumber: '12345678901',
-    walletId: 'W1003'
-  },
-  {
-    id: 'W1004',
-    userId: 'U1005',
-    userName: 'Robert Mbeki',
-    amount: 75000,
-    requestDate: '2025-04-24T11:20:00Z',
-    status: 'completed',
-    paymentMethod: 'tigopesa',
-    accountNumber: '255762345678',
-    walletId: 'W1005',
-    processedDate: '2025-04-24T14:35:00Z',
-    processedBy: 'Broker Admin'
-  },
-  {
-    id: 'W1005',
-    userId: 'U1004',
-    userName: 'Tanzanite Capital',
-    amount: 950000,
-    requestDate: '2025-04-23T13:10:00Z',
-    status: 'completed',
-    paymentMethod: 'bank',
-    accountNumber: '98765432109',
-    walletId: 'W1004',
-    processedDate: '2025-04-23T16:20:00Z',
-    processedBy: 'Broker Admin'
-  }
-]
 
 export const useBrokerWalletStore = create<BrokerWalletStore>()(
   persist(
     (set, get) => ({
-      balance: 5000000, // Starting with 5M TZS for demo purposes
-      totalDeposits: 5000000,
+      balance: 0,
+      totalDeposits: 0,
       totalDisbursements: 0,
-      deposits: [
-        {
-          id: 'DEP1001',
-          amount: 5000000,
-          method: 'bank',
-          reference: 'INIT-DEPOSIT',
-          status: 'completed',
-          date: new Date('2025-04-20T10:00:00Z').toISOString(),
-        }
-      ],
+      deposits: [],
       disbursements: [],
-      withdrawalRequests: initialWithdrawalRequests,
-      lastDepositDate: new Date('2025-04-20T10:00:00Z').toISOString(),
+      withdrawalRequests: [],
+      lastDepositDate: null,
       lastDisbursementDate: null,
-
-      deposit: (amount: number, method: string, reference: string) => {
-        const newDeposit: BrokerDeposit = {
-          id: crypto.randomUUID(),
-          amount,
-          method,
-          reference,
-          status: 'completed',
-          date: new Date().toISOString(),
-        }
-
-        set((state) => ({
-          balance: state.balance + amount,
-          totalDeposits: state.totalDeposits + amount,
-          lastDepositDate: new Date().toISOString(),
-          deposits: [newDeposit, ...state.deposits],
-        }))
-      },
-
-      disburseToUserWallet: async (userId: string, userName: string, amount: number, notes?: string) => {
-        const state = get()
-        
-        // Check if broker has sufficient funds
-        if (state.balance < amount) {
-          return {
-            success: false,
-            message: 'Insufficient funds in broker wallet. Please deposit more funds.'
-          }
-        }
-
-        // Create disbursement record
-        const disbursementId = crypto.randomUUID()
-        const newDisbursement: BrokerDisbursement = {
-          id: disbursementId,
-          userId,
-          userName,
-          amount,
-          status: 'pending',
-          date: new Date().toISOString(),
-          notes
-        }
-
-        // Update broker wallet
-        set((state) => ({
-          balance: state.balance - amount,
-          totalDisbursements: state.totalDisbursements + amount,
-          lastDisbursementDate: new Date().toISOString(),
-          disbursements: [newDisbursement, ...state.disbursements],
-        }))
-
-        // In a real application, this would call an API to update the user's wallet
-        // For now, we'll simulate a successful disbursement
-        setTimeout(() => {
-          get().updateDisbursementStatus(disbursementId, 'completed')
-        }, 2000)
-
-        return {
-          success: true,
-          message: `Successfully disbursed ${amount} TZS to ${userName}'s wallet`,
-          disbursementId
-        }
-      },
-
-      updateDisbursementStatus: (disbursementId: string, status: 'completed' | 'pending' | 'processing' | 'failed') => {
-        set((state) => ({
-          disbursements: state.disbursements.map(d => 
-            d.id === disbursementId ? { ...d, status } : d
-          )
-        }))
-      },
+      isLoading: false,
+      error: null,
       
-      getWithdrawalRequests: () => {
-        return get().withdrawalRequests
-      },
-      
-      processWithdrawalRequest: async (requestId: string, paymentMethod: string, notes?: string) => {
-        const state = get()
-        
-        // Find the withdrawal request
-        const request = state.withdrawalRequests.find(r => r.id === requestId)
-        if (!request) {
-          return {
-            success: false,
-            message: 'Withdrawal request not found'
-          }
-        }
-        
-        // Check if request is already processed
-        if (request.status !== 'pending') {
-          return {
-            success: false,
-            message: `This request is already ${request.status}`
-          }
-        }
-        
-        // Check if broker has sufficient funds
-        if (state.balance < request.amount) {
-          return {
-            success: false,
-            message: 'Insufficient funds in broker wallet. Please deposit more funds.'
-          }
-        }
-        
-        // Process the withdrawal by creating a disbursement
-        const result = await get().disburseToUserWallet(
-          request.userId,
-          request.userName,
-          request.amount,
-          `Withdrawal request ${requestId} processed via ${paymentMethod}. ${notes || ''}`
-        )
-        
-        if (result.success) {
-          // Update the withdrawal request status
-          set((state) => ({
-            withdrawalRequests: state.withdrawalRequests.map(r => 
-              r.id === requestId 
-                ? { 
-                    ...r, 
-                    status: 'completed', 
-                    paymentMethod, 
-                    processedDate: new Date().toISOString(),
-                    processedBy: 'Broker Admin', // In a real app, this would be the current user
-                    notes: notes || r.notes
-                  } 
-                : r
-            )
-          }))
+      fetchBrokerWalletData: async () => {
+        try {
+          set({ isLoading: true, error: null });
           
-          return result
+          // Fetch broker wallet data from API
+          const response = await axios.get('/api/broker/wallet/transactions');
+          
+          if (response.status === 200) {
+            const { 
+              balance, 
+              totalDeposits, 
+              totalDisbursements, 
+              deposits, 
+              disbursements, 
+              withdrawalRequests,
+              lastDepositDate, 
+              lastDisbursementDate 
+            } = response.data;
+            
+            set({
+              balance,
+              totalDeposits,
+              totalDisbursements,
+              deposits: deposits || [],
+              disbursements: disbursements || [],
+              withdrawalRequests: withdrawalRequests || [],
+              lastDepositDate,
+              lastDisbursementDate,
+              isLoading: false
+            });
+          } else {
+            throw new Error('Failed to fetch broker wallet data');
+          }
+        } catch (error) {
+          console.error('Error fetching broker wallet data:', error);
+          set({ 
+            isLoading: false, 
+            error: error instanceof Error ? error.message : 'An unknown error occurred' 
+          });
         }
-        
-        return result
       },
       
-      addWithdrawalRequest: (request) => {
-        const newRequest: WithdrawalRequest = {
-          ...request,
-          id: 'W' + Math.floor(1000 + Math.random() * 9000), // Simple ID generation
-          status: 'pending',
-          requestDate: new Date().toISOString()
+      deposit: async (amount, method, reference, notes) => {
+        try {
+          set({ isLoading: true, error: null });
+          
+          // Send deposit request to API
+          const response = await axios.post('/api/broker/wallet/transactions', {
+            type: 'DEPOSIT',
+            amount,
+            method,
+            reference,
+            notes
+          });
+          
+          if (response.status === 201) {
+            // Refresh broker wallet data after successful deposit
+            await get().fetchBrokerWalletData();
+          } else {
+            throw new Error('Failed to process broker deposit');
+          }
+        } catch (error) {
+          console.error('Error processing broker deposit:', error);
+          set({ 
+            isLoading: false, 
+            error: error instanceof Error ? error.message : 'An unknown error occurred' 
+          });
         }
-        
-        set((state) => ({
-          withdrawalRequests: [newRequest, ...state.withdrawalRequests]
-        }))
-        
-        return newRequest.id
+      },
+      
+      disburseToUserWallet: async (userId, userName, amount, notes) => {
+        try {
+          if (amount > get().balance) {
+            throw new Error('Insufficient funds in broker wallet');
+          }
+          
+          set({ isLoading: true, error: null });
+          
+          // Send disbursement request to API
+          const response = await axios.post('/api/broker/wallet/transactions', {
+            type: 'DISBURSEMENT',
+            amount,
+            userId,
+            userName,
+            notes
+          });
+          
+          if (response.status === 201) {
+            // Refresh broker wallet data after successful disbursement
+            await get().fetchBrokerWalletData();
+          } else {
+            throw new Error('Failed to process disbursement');
+          }
+        } catch (error) {
+          console.error('Error processing disbursement:', error);
+          set({ 
+            isLoading: false, 
+            error: error instanceof Error ? error.message : 'An unknown error occurred' 
+          });
+        }
+      },
+      
+      requestWithdrawal: async (amount, method, accountDetails) => {
+        try {
+          if (amount > get().balance) {
+            throw new Error('Insufficient funds in broker wallet');
+          }
+          
+          set({ isLoading: true, error: null });
+          
+          // Send withdrawal request to API
+          const response = await axios.post('/api/broker/wallet/transactions', {
+            type: 'WITHDRAWAL',
+            amount,
+            method,
+            accountDetails
+          });
+          
+          if (response.status === 201) {
+            // Refresh broker wallet data after successful withdrawal request
+            await get().fetchBrokerWalletData();
+          } else {
+            throw new Error('Failed to process withdrawal request');
+          }
+        } catch (error) {
+          console.error('Error processing withdrawal request:', error);
+          set({ 
+            isLoading: false, 
+            error: error instanceof Error ? error.message : 'An unknown error occurred' 
+          });
+        }
+      },
+      
+      approveWithdrawalRequest: async (requestId) => {
+        try {
+          set({ isLoading: true, error: null });
+          
+          // Send approve request to API
+          const response = await axios.patch('/api/broker/wallet/transactions', {
+            requestId,
+            action: 'approve'
+          });
+          
+          if (response.status === 200) {
+            // Refresh broker wallet data after successful approval
+            await get().fetchBrokerWalletData();
+          } else {
+            throw new Error('Failed to approve withdrawal request');
+          }
+        } catch (error) {
+          console.error('Error approving withdrawal request:', error);
+          set({ 
+            isLoading: false, 
+            error: error instanceof Error ? error.message : 'An unknown error occurred' 
+          });
+        }
+      },
+      
+      rejectWithdrawalRequest: async (requestId) => {
+        try {
+          set({ isLoading: true, error: null });
+          
+          // Send reject request to API
+          const response = await axios.patch('/api/broker/wallet/transactions', {
+            requestId,
+            action: 'reject'
+          });
+          
+          if (response.status === 200) {
+            // Refresh broker wallet data after successful rejection
+            await get().fetchBrokerWalletData();
+          } else {
+            throw new Error('Failed to reject withdrawal request');
+          }
+        } catch (error) {
+          console.error('Error rejecting withdrawal request:', error);
+          set({ 
+            isLoading: false, 
+            error: error instanceof Error ? error.message : 'An unknown error occurred' 
+          });
+        }
       }
     }),
     {

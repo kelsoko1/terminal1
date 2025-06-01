@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { AuthProvider } from '../lib/auth/auth-context';
+import { EcommerceProvider } from '@/contexts/EcommerceContext';
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [isHydrated, setIsHydrated] = useState(false);
@@ -12,7 +13,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return isHydrated ? (
     <AuthProvider>
-      {children}
+      <EcommerceProvider>
+        {children}
+      </EcommerceProvider>
     </AuthProvider>
   ) : null;
 }

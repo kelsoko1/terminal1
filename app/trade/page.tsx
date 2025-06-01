@@ -40,37 +40,39 @@ export default function TradePage() {
   return (
     <div className="container py-6">
       {/* Asset Type Selection */}
-      <div className="flex justify-center gap-6 mb-8">
-        <AssetTypeBubble
-          label="Stocks"
-          icon={<LineChart />}
-          isSelected={selectedAssetType === 'stocks'}
-          onClick={() => setSelectedAssetType('stocks')}
-        />
-        <AssetTypeBubble
-          label="Bonds"
-          icon={<Coins />}
-          isSelected={selectedAssetType === 'bonds'}
-          onClick={() => setSelectedAssetType('bonds')}
-        />
-        <AssetTypeBubble
-          label="Funds"
-          icon={<Briefcase />}
-          isSelected={selectedAssetType === 'funds'}
-          onClick={() => setSelectedAssetType('funds')}
-        />
-        <AssetTypeBubble
-          label="FX Futures"
-          icon={<RefreshCw />}
-          isSelected={selectedAssetType === 'fx'}
-          onClick={() => setSelectedAssetType('fx')}
-        />
-        <AssetTypeBubble
-          label="Commodities"
-          icon={<Package />}
-          isSelected={selectedAssetType === 'commodities'}
-          onClick={() => setSelectedAssetType('commodities')}
-        />
+      <div className="overflow-x-auto pb-2 mb-6">
+        <div className="flex min-w-max md:justify-center gap-2 md:gap-6">
+          <AssetTypeBubble
+            label="Stocks"
+            icon={<LineChart className="w-4 h-4 md:w-5 md:h-5" />}
+            isSelected={selectedAssetType === 'stocks'}
+            onClick={() => setSelectedAssetType('stocks')}
+          />
+          <AssetTypeBubble
+            label="Bonds"
+            icon={<Coins className="w-4 h-4 md:w-5 md:h-5" />}
+            isSelected={selectedAssetType === 'bonds'}
+            onClick={() => setSelectedAssetType('bonds')}
+          />
+          <AssetTypeBubble
+            label="Funds"
+            icon={<Briefcase className="w-4 h-4 md:w-5 md:h-5" />}
+            isSelected={selectedAssetType === 'funds'}
+            onClick={() => setSelectedAssetType('funds')}
+          />
+          <AssetTypeBubble
+            label="FX"
+            icon={<RefreshCw className="w-4 h-4 md:w-5 md:h-5" />}
+            isSelected={selectedAssetType === 'fx'}
+            onClick={() => setSelectedAssetType('fx')}
+          />
+          <AssetTypeBubble
+            label="Commodities"
+            icon={<Package className="w-4 h-4 md:w-5 md:h-5" />}
+            isSelected={selectedAssetType === 'commodities'}
+            onClick={() => setSelectedAssetType('commodities')}
+          />
+        </div>
       </div>
 
       {selectedAssetType === 'stocks' && (

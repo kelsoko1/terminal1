@@ -185,7 +185,7 @@ export function SubscriptionManagement() {
     { month: 'Apr 2025', revenue: 16500, subscribers: 450, churnRate: 1.5 }
   ];
 
-  const formatCurrency = (amount: number, currency: string = 'USD') => {
+  const formatCurrency = (amount: number, currency: string = 'TZS') => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency

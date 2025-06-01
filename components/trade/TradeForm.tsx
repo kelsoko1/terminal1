@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { marketData } from '@/lib/data/markets'
 import { toast } from '@/components/ui/use-toast'
+import { formatCurrency } from '@/lib/utils/currency'
 
 interface TradeFormProps {
   type: 'market' | 'limit'
@@ -47,7 +48,7 @@ export function TradeForm({ type, symbol }: TradeFormProps) {
     // Here you would integrate with your trading backend
     toast({
       title: "Order Submitted",
-      description: `${side.toUpperCase()} ${quantity} ${symbol} @ ${type === 'market' ? 'MARKET' : `TZS ${price}`}`,
+      description: `${side.toUpperCase()} ${quantity} ${symbol} @ ${type === 'market' ? 'MARKET' : formatCurrency(parseFloat(price))}`,
     })
   }
 
@@ -82,7 +83,7 @@ export function TradeForm({ type, symbol }: TradeFormProps) {
 
       {type === 'limit' && (
         <div className="space-y-2">
-          <Label>Price (TZS)</Label>
+          <Label>Price</Label>
           <Input
             type="number"
             placeholder="Enter price"
@@ -95,7 +96,7 @@ export function TradeForm({ type, symbol }: TradeFormProps) {
       <div className="space-y-2">
         <Label>Estimated Total</Label>
         <div className="text-lg font-bold">
-          TZS {(parseFloat(quantity || '0') * (parseFloat(price || String(instrument.price)))).toLocaleString()}
+          {formatCurrency(parseFloat(quantity || '0') * (parseFloat(price || String(instrument.price))))}
         </div>
       </div>
 

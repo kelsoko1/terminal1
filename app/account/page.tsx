@@ -1,6 +1,9 @@
 'use client'
 
 import { useState, useEffect, useRef, useMemo } from 'react'
+import { useAuth } from '@/lib/auth/auth-context'
+import { useToast } from '@/components/ui/use-toast'
+import '@/styles/account-mobile.css'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -11,24 +14,32 @@ import { DSESettings } from '@/components/account/DSESettings'
 import { AccountSubscription } from '@/components/subscription/AccountSubscription'
 import { AccountAds } from '@/components/account/AccountAds'
 import { InvestorProfile } from '@/components/account/InvestorProfile'
+import { EcommerceManagement } from '@/components/account/EcommerceManagement'
+import { UserChallenges } from '@/components/account/UserChallenges'
+import { AccountMessaging } from '@/components/messages/AccountMessaging'
+import { PostCard } from '@/components/social/PostCard'
+import { formatDistanceToNow } from 'date-fns'
 import { 
-  MessageSquare, 
-  Users, 
-  Camera, 
-  Calendar, 
-  MapPin, 
-  Link as LinkIcon, 
   Edit, 
-  AtSign, 
-  X, 
+  MapPin, 
+  Globe, 
+  Mail, 
+  Phone, 
+  Calendar, 
+  MessageSquare, 
+  Share2, 
   Heart, 
-  MessageCircle, 
-  Repeat, 
-  Share, 
-  Bookmark,
-  MoreHorizontal
+  Bookmark, 
+  MoreHorizontal, 
+  User, 
+  FileText, 
+  Loader2, 
+  AtSign,
+  ShoppingBag,
+  X
 } from 'lucide-react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { Textarea } from '@/components/ui/textarea'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
@@ -43,22 +54,26 @@ import {
   DialogClose
 } from "@/components/ui/dialog"
 
-// Define post type
-interface Post {
-  id: string;
-  content: string;
-  timestamp: string;
-  likes: number;
-  comments: number;
-  shares: number;
-  isLiked: boolean;
-  isBookmarked: boolean;
+// Post type definition
+type Post = {
+  id: string
+  content: string
+  timestamp: string
+  likes: number
+  comments: number
+  shares: number
+  isLiked: boolean
+  isBookmarked: boolean
   author: {
-    name: string;
-    username: string;
-    avatar?: string;
-  };
-  images?: string[];
+    id: string
+    name: string
+    username: string
+    avatarUrl?: string
+  }
+  images?: string[]
+  tags?: string[]
+  createdAt?: string
+  updatedAt?: string
 }
 
 // Define message type
@@ -77,99 +92,32 @@ interface ChatMessagesRecord {
 }
 
 export default function AccountPage() {
-  const [notifications, setNotifications] = useState(true)
-  const [twoFactor, setTwoFactor] = useState(false)
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const { user } = useAuth()
+  const { toast } = useToast()
+  const [isEditing, setIsEditing] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [activeTab, setActiveTab] = useState('profile')
   const [activePostsTab, setActivePostsTab] = useState<'posts' | 'likes'>('posts')
   const [selectedChat, setSelectedChat] = useState<string | null>(null)
   const [messageInput, setMessageInput] = useState('')
   const [isLoadingMessages, setIsLoadingMessages] = useState(false)
   const [isLoadingContacts, setIsLoadingContacts] = useState(false)
+  const [notifications, setNotifications] = useState(true)
+  const [twoFactor, setTwoFactor] = useState(false)
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [isTyping, setIsTyping] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const [activeSettingsTab, setActiveSettingsTab] = useState<'security' | 'preferences' | 'dse' | 'investor'>('security')
   const [activeSubscriptionTab, setActiveSubscriptionTab] = useState<'subscription' | 'subscription2'>('subscription')
+  const [isEditProfileOpen, setIsEditProfileOpen] = useState(false)
 
   // Sample user posts
-  const [userPosts, setUserPosts] = useState<Post[]>([
-    {
-      id: '1',
-      content: 'Just analyzed the latest market trends. Tech stocks showing strong momentum despite broader market volatility. #investing #stockmarket',
-      timestamp: '2h ago',
-      likes: 42,
-      comments: 7,
-      shares: 5,
-      isLiked: false,
-      isBookmarked: true,
-      author: {
-        name: 'John Doe',
-        username: 'johndoe'
-      }
-    },
-    {
-      id: '2',
-      content: 'Attended a fascinating webinar on sustainable investing strategies. The future of finance is definitely green! 🌱 #ESG #sustainablefinance',
-      timestamp: '1d ago',
-      likes: 76,
-      comments: 12,
-      shares: 15,
-      isLiked: false,
-      isBookmarked: false,
-      author: {
-        name: 'John Doe',
-        username: 'johndoe'
-      },
-      images: ['/placeholder-chart.jpg']
-    },
-    {
-      id: '3',
-      content: 'My portfolio performance this quarter exceeded expectations. Diversification strategy paying off! 📈 #investing #portfoliomanagement',
-      timestamp: '3d ago',
-      likes: 128,
-      comments: 23,
-      shares: 31,
-      isLiked: false,
-      isBookmarked: false,
-      author: {
-        name: 'John Doe',
-        username: 'johndoe'
-      }
-    }
-  ])
-
-  // Sample liked posts
-  const [likedPosts, setLikedPosts] = useState<Post[]>([
-    {
-      id: '4',
-      content: 'Breaking: Fed announces new interest rate policy. Markets expected to react strongly tomorrow. #finance #federalreserve',
-      timestamp: '5h ago',
-      likes: 215,
-      comments: 43,
-      shares: 87,
-      isLiked: true,
-      isBookmarked: false,
-      author: {
-        name: 'Financial Times',
-        username: 'financialtimes'
-      }
-    },
-    {
-      id: '5',
-      content: 'New research suggests ESG investments outperform traditional portfolios over 10-year horizons. Sustainability isn’t just good for the planet—it’s good for your returns too.',
-      timestamp: '2d ago',
-      likes: 189,
-      comments: 32,
-      shares: 56,
-      isLiked: true,
-      isBookmarked: true,
-      author: {
-        name: 'Morgan Stanley',
-        username: 'morganstanley'
-      }
-    }
-  ])
+  const [posts, setPosts] = useState<Post[]>([])
+  const [likedPosts, setLikedPosts] = useState<Post[]>([])
+  const [isLoadingPosts, setIsLoadingPosts] = useState(false)
 
   // Sample contacts/chats for WhatsApp-like UI
   const [contacts, setContacts] = useState([
@@ -239,19 +187,20 @@ export default function AccountPage() {
     ]
   })
 
-  // Profile data
+  // User profile data
   const [profileData, setProfileData] = useState({
-    name: 'John Doe',
-    username: 'johndoe',
-    email: 'john@example.com',
-    phone: '+1 (555) 123-4567',
-    bio: 'Trader and investor passionate about financial markets. Focused on long-term growth strategies and sustainable investments.',
-    location: 'New York, NY',
-    website: 'johndoe.com',
-    joinDate: 'January 2023',
-    following: 245,
-    followers: 1024
+    name: "",
+    username: "",
+    bio: "",
+    location: "",
+    website: "",
+    email: "",
+    phone: "",
+    joinDate: "",
+    avatarUrl: "",
+    coverImageUrl: ""
   })
+  const [isLoadingProfile, setIsLoadingProfile] = useState(false)
 
   // Scroll to bottom of messages when new message is added
   useEffect(() => {
@@ -360,42 +309,232 @@ export default function AccountPage() {
     }
   }, [selectedChat, contacts]);
 
-  const handleSaveProfile = (e: React.FormEvent) => {
-    e.preventDefault()
-    // Here you would typically save the profile data to your backend
-    setIsEditDialogOpen(false)
-    // Show a success notification
+  // Fetch user profile data
+  useEffect(() => {
+    if (user?.id) {
+      fetchUserProfile()
+      fetchUserPosts()
+    }
+  }, [user])
+  
+  // Fetch user profile data from API
+  const fetchUserProfile = async () => {
+    setIsLoadingProfile(true)
+    try {
+      const response = await fetch(`/api/users/profile?userId=${user?.id}`)
+      if (response.ok) {
+        const data = await response.json()
+        setProfileData({
+          name: data.name || '',
+          username: data.username || '',
+          bio: data.bio || '',
+          location: data.location || '',
+          website: data.website || '',
+          email: data.email || '',
+          phone: data.phone || '',
+          joinDate: new Date(data.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+          avatarUrl: data.avatarUrl || '',
+          coverImageUrl: data.coverImageUrl || ''
+        })
+      }
+    } catch (error) {
+      console.error('Error fetching user profile:', error)
+      toast({
+        title: "Error",
+        description: "Could not load profile data",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoadingProfile(false)
+    }
   }
+  
+  // Fetch user posts from API
+  const fetchUserPosts = async () => {
+    setIsLoadingPosts(true)
+    try {
+      // Fetch user's posts
+      const postsResponse = await fetch(`/api/users/${user?.id}/posts`)
+      if (postsResponse.ok) {
+        const postsData = await postsResponse.json()
+        setPosts(postsData)
+      }
+      
+      // Fetch user's liked posts
+      const likedPostsResponse = await fetch(`/api/users/${user?.id}/likes`)
+      if (likedPostsResponse.ok) {
+        const likedPostsData = await likedPostsResponse.json()
+        setLikedPosts(likedPostsData)
+      }
+    } catch (error) {
+      console.error('Error fetching user posts:', error)
+      toast({
+        title: "Error",
+        description: "Could not load posts",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoadingPosts(false)
+    }
+  };
 
-  const handleLikePost = (postId: string, postType: 'posts' | 'likes') => {
-    if (postType === 'posts') {
-      setUserPosts(userPosts.map(post => 
-        post.id === postId 
-          ? { ...post, isLiked: !post.isLiked, likes: post.isLiked ? post.likes - 1 : post.likes + 1 } 
-          : post
-      ))
-    } else {
-      setLikedPosts(likedPosts.map(post => 
-        post.id === postId 
-          ? { ...post, isLiked: !post.isLiked, likes: post.isLiked ? post.likes - 1 : post.likes + 1 } 
-          : post
-      ))
+  // Handle profile edit
+  const handleProfileEdit = async (updatedProfile: typeof profileData) => {
+    try {
+      const response = await fetch('/api/users/profile', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: user?.id,
+          ...updatedProfile
+        }),
+      })
+      
+      if (response.ok) {
+        setProfileData(updatedProfile)
+        setIsEditProfileOpen(false)
+        toast({
+          title: "Success",
+          description: "Profile updated successfully",
+        })
+      } else {
+        throw new Error('Failed to update profile')
+      }
+    } catch (error) {
+      console.error('Error updating profile:', error)
+      toast({
+        title: "Error",
+        description: "Could not update profile",
+        variant: "destructive",
+      })
+    }
+  }
+  
+  // Handle profile form submission
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault()
+    try {
+      const response = await fetch('/api/users/profile', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: user?.id,
+          ...profileData
+        }),
+      })
+      
+      if (response.ok) {
+        setIsEditDialogOpen(false)
+        toast({
+          title: "Success",
+          description: "Profile updated successfully",
+        })
+      } else {
+        throw new Error('Failed to update profile')
+      }
+    } catch (error) {
+      console.error('Error updating profile:', error)
+      toast({
+        title: "Error",
+        description: "Could not update profile",
+        variant: "destructive",
+      })
     }
   }
 
-  const handleBookmarkPost = (postId: string, postType: 'posts' | 'likes') => {
-    if (postType === 'posts') {
-      setUserPosts(userPosts.map(post => 
-        post.id === postId 
-          ? { ...post, isBookmarked: !post.isBookmarked } 
-          : post
-      ))
-    } else {
-      setLikedPosts(likedPosts.map(post => 
-        post.id === postId 
-          ? { ...post, isBookmarked: !post.isBookmarked } 
-          : post
-      ))
+  // Handle post like toggle
+  const handleLikeToggle = async (postId: string) => {
+    try {
+      // Optimistically update UI
+      setPosts(posts.map(post => {
+        if (post.id === postId) {
+          return { ...post, isLiked: !post.isLiked, likes: post.isLiked ? post.likes - 1 : post.likes + 1 }
+        }
+        return post
+      }))
+      
+      // Send API request to update like status
+      const response = await fetch(`/api/posts/${postId}/like`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: user?.id,
+        }),
+      })
+      
+      if (!response.ok) {
+        // Revert if API call fails
+        setPosts(posts.map(post => {
+          if (post.id === postId) {
+            return { ...post, isLiked: !post.isLiked, likes: post.isLiked ? post.likes + 1 : post.likes - 1 }
+          }
+          return post
+        }))
+        toast({
+          title: "Error",
+          description: "Could not update like status",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      console.error("Error toggling like:", error)
+      toast({
+        title: "Error",
+        description: "Could not update like status",
+        variant: "destructive",
+      })
+    }
+  }
+
+  // Handle post bookmark toggle
+  const handleBookmarkToggle = async (postId: string) => {
+    try {
+      // Optimistically update UI
+      setPosts(posts.map(post => {
+        if (post.id === postId) {
+          return { ...post, isBookmarked: !post.isBookmarked }
+        }
+        return post
+      }))
+      
+      // Send API request to update bookmark status
+      const response = await fetch(`/api/posts/${postId}/bookmark`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: user?.id,
+        }),
+      })
+      
+      if (!response.ok) {
+        // Revert if API call fails
+        setPosts(posts.map(post => {
+          if (post.id === postId) {
+            return { ...post, isBookmarked: !post.isBookmarked }
+          }
+          return post
+        }))
+        toast({
+          title: "Error",
+          description: "Could not update bookmark status",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      console.error("Error toggling bookmark:", error)
+      toast({
+        title: "Error",
+        description: "Could not update bookmark status",
+        variant: "destructive",
+      })
     }
   }
 
@@ -596,127 +735,157 @@ export default function AccountPage() {
     }
   };
 
-  // Component for rendering a single post
-  const PostCard = ({ post, postType }: { post: Post, postType: 'posts' | 'likes' }) => (
-    <div className="border-b border-gray-200 p-4 hover:bg-gray-50 transition-colors">
-      <div className="flex space-x-3">
-        <Avatar className="h-10 w-10">
-          <AvatarImage src={post.author.avatar || "/placeholder-avatar.jpg"} alt={post.author.name} />
-          <AvatarFallback>{post.author.name.charAt(0)}</AvatarFallback>
-        </Avatar>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center justify-between">
-            <div>
-              <span className="font-semibold">{post.author.name}</span>
-              <span className="text-gray-500 ml-1">@{post.author.username}</span>
-              <span className="text-gray-500 mx-1">·</span>
-              <span className="text-gray-500">{post.timestamp}</span>
-            </div>
-            <Button variant="ghost" size="sm" className="rounded-full h-8 w-8 p-0">
-              <MoreHorizontal className="h-4 w-4 text-gray-500" />
-            </Button>
-          </div>
-          
-          <p className="mt-1 text-gray-800">{post.content}</p>
-          
-          {post.images && post.images.length > 0 && (
-            <div className="mt-3 rounded-xl overflow-hidden">
-              <img 
-                src={post.images[0]} 
-                alt="Post attachment" 
-                className="w-full h-auto object-cover"
-                style={{ maxHeight: '300px' }}
+  // PostCard component for displaying posts
+  const PostCard = ({ post, onLike, onBookmark }: { post: Post, onLike: (id: string) => void, onBookmark: (id: string) => void }) => {
+    return (
+      <div className="border rounded-lg p-4">
+        <div className="flex items-start space-x-3">
+          <div className="h-10 w-10 rounded-full bg-gray-200 overflow-hidden">
+            {post.author.avatarUrl ? (
+              <Image 
+                src={post.author.avatarUrl} 
+                alt={post.author.name} 
+                width={40} 
+                height={40}
+                className="object-cover"
               />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center bg-gray-200 text-gray-400">
+                <User className="h-6 w-6" />
+              </div>
+            )}
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex justify-between items-center">
+              <div>
+                <p className="font-medium">{post.author.name}</p>
+                <p className="text-sm text-gray-500">{post.author.username} · {post.timestamp}</p>
+              </div>
+              <Button variant="ghost" size="icon">
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
             </div>
-          )}
-          
-          <div className="flex justify-between mt-3 text-gray-500">
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="rounded-full flex items-center space-x-1 text-gray-500 hover:text-blue-500"
-            >
-              <MessageCircle className="h-4 w-4" />
-              <span>{post.comments}</span>
-            </Button>
-            
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="rounded-full flex items-center space-x-1 text-gray-500 hover:text-green-500"
-            >
-              <Repeat className="h-4 w-4" />
-              <span>{post.shares}</span>
-            </Button>
-            
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className={`rounded-full flex items-center space-x-1 ${post.isLiked ? 'text-red-500' : 'text-gray-500 hover:text-red-500'}`}
-              onClick={() => handleLikePost(post.id, postType)}
-            >
-              <Heart className={`h-4 w-4 ${post.isLiked ? 'fill-current' : ''}`} />
-              <span>{post.likes}</span>
-            </Button>
-            
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className={`rounded-full flex items-center space-x-1 ${post.isBookmarked ? 'text-blue-500' : 'text-gray-500 hover:text-blue-500'}`}
-              onClick={() => handleBookmarkPost(post.id, postType)}
-            >
-              <Bookmark className={`h-4 w-4 ${post.isBookmarked ? 'fill-current' : ''}`} />
-            </Button>
-            
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="rounded-full flex items-center space-x-1 text-gray-500 hover:text-blue-500"
-            >
-              <Share className="h-4 w-4" />
-            </Button>
+            <p className="mt-2">{post.content}</p>
+            {post.images && post.images.length > 0 && (
+              <div className="mt-3 rounded-lg overflow-hidden">
+                <Image 
+                  src={post.images[0]} 
+                  alt="Post image" 
+                  width={500} 
+                  height={300}
+                  className="w-full object-cover"
+                />
+              </div>
+            )}
+            <div className="flex justify-between mt-4">
+              <div className="flex space-x-4">
+                <button 
+                  className={`flex items-center space-x-1 ${post.isLiked ? 'text-red-500' : 'text-gray-500'} hover:text-red-500`}
+                  onClick={() => onLike(post.id)}
+                >
+                  <Heart className="h-4 w-4" fill={post.isLiked ? "currentColor" : "none"} />
+                  <span>{post.likes}</span>
+                </button>
+                <button className="flex items-center space-x-1 text-gray-500 hover:text-blue-500">
+                  <MessageSquare className="h-4 w-4" />
+                  <span>{post.comments}</span>
+                </button>
+                <button className="flex items-center space-x-1 text-gray-500 hover:text-green-500">
+                  <Share2 className="h-4 w-4" />
+                  <span>{post.shares}</span>
+                </button>
+              </div>
+              <button 
+                className={`${post.isBookmarked ? 'text-yellow-500' : 'text-gray-500'} hover:text-yellow-500`}
+                onClick={() => onBookmark(post.id)}
+              >
+                <Bookmark className="h-4 w-4" fill={post.isBookmarked ? "currentColor" : "none"} />
+              </button>
+            </div>
           </div>
         </div>
       </div>
-    </div>
-  )
+    )
+  }
 
   return (
-    <div className="container mx-auto p-6">
-      <h1 className="text-3xl font-bold mb-6">Account Settings</h1>
+    <div className="container mx-auto p-4 md:p-6 max-w-full md:max-w-6xl account-page">
+      <h1 className="text-xl md:text-3xl font-bold mb-3 md:mb-6">Account Settings</h1>
 
-      <Tabs defaultValue="profile" className="w-full">
-        <TabsList>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        {/* Desktop TabsList - Hidden on mobile */}
+        <TabsList className="hidden md:flex">
           <TabsTrigger value="profile">Profile</TabsTrigger>
           <TabsTrigger value="messages">Messages</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
+          <TabsTrigger value="challenges">Challenges</TabsTrigger>
           <TabsTrigger value="subscription">Subscription</TabsTrigger>
           <TabsTrigger value="ads">Ads</TabsTrigger>
+          <TabsTrigger value="ecommerce" className="flex items-center gap-1">
+            <ShoppingBag className="h-4 w-4" />
+            Soko
+          </TabsTrigger>
         </TabsList>
+        
+        {/* Mobile Dropdown - Visible only on mobile */}
+        <div className="md:hidden account-mobile-select-container">
+          <select 
+            id="mobile-tab-select"
+            className="w-full border bg-background text-foreground mobile-tab-select touch-manipulation" 
+            value={activeTab}
+            onChange={(e) => setActiveTab(e.target.value)}
+            aria-label="Select account section"
+          >
+            <option value="profile">👤 Profile</option>
+            <option value="messages">💬 Messages</option>
+            <option value="settings">⚙️ Settings</option>
+            <option value="challenges">🏆 Challenges</option>
+            <option value="subscription">⭐ Subscription</option>
+            <option value="ads">📢 Ads</option>
+            <option value="ecommerce">🛍️ Soko</option>
+          </select>
+        </div>
 
         <TabsContent value="profile">
           <Card className="p-0 overflow-hidden">
             {/* Profile Banner */}
-            <div className="relative h-48 bg-gradient-to-r from-blue-500 to-purple-600">
-              <Button variant="ghost" className="absolute bottom-2 right-2 bg-black/50 text-white hover:bg-black/70" size="sm">
-                <Camera className="h-4 w-4 mr-2" />
-                Change Banner
-              </Button>
+            <div className="relative w-full h-36 md:h-48 rounded-t-lg overflow-hidden">
+              {profileData.coverImageUrl ? (
+                <Image
+                  src={profileData.coverImageUrl}
+                  alt="Profile banner"
+                  fill
+                  className="object-cover"
+                  priority
+                />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-r from-blue-400 to-purple-500" />
+              )}
             </div>
-            
-            {/* Profile Picture and Edit Button */}
-            <div className="relative px-6">
-              <div className="absolute -top-16 left-6 border-4 border-white rounded-full bg-white">
-                <Avatar className="h-32 w-32">
-                  <AvatarImage src="/placeholder-avatar.jpg" alt={profileData.name} />
-                  <AvatarFallback className="text-3xl">{profileData.name.charAt(0)}</AvatarFallback>
-                </Avatar>
-                <Button variant="ghost" className="absolute bottom-0 right-0 rounded-full h-8 w-8 p-0 bg-black/50 text-white hover:bg-black/70">
-                  <Camera className="h-4 w-4" />
-                </Button>
+            <div className="relative px-4 md:px-6 profile-header">
+              <div className="absolute -top-14 md:-top-16 left-1/2 md:left-6 transform -translate-x-1/2 md:translate-x-0 w-28 h-28 md:w-32 md:h-32 rounded-full border-4 border-white bg-gray-200 overflow-hidden profile-avatar">
+                {profileData.avatarUrl ? (
+                  <Image
+                    src={profileData.avatarUrl}
+                    alt="Profile picture"
+                    width={112}
+                    height={112}
+                    className="object-cover w-full h-full"
+                    priority
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-gray-200 text-gray-500">
+                    <User className="h-12 w-12 md:h-16 md:w-16" />
+                  </div>
+                )}
+                <button 
+                  className="absolute bottom-0 right-0 bg-primary text-white p-1 rounded-full touch-manipulation"
+                  onClick={() => toast({ title: "Edit profile picture", description: "This would open a profile picture editor" })}
+                >
+                  <Edit className="h-3 w-3 md:h-4 md:w-4" />
+                </button>
               </div>
-              
-              <div className="flex justify-end pt-4 pb-2">
+              <div className="flex justify-center md:justify-end pt-16 md:pt-4 pb-2 profile-actions">
                 <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
                   <DialogTrigger asChild>
                     <Button variant="outline" className="gap-2">
@@ -821,416 +990,155 @@ export default function AccountPage() {
             </div>
             
             {/* Profile Info */}
-            <div className="px-6 pt-16 pb-6 space-y-4">
-              <div>
-                <h2 className="text-2xl font-bold">{profileData.name}</h2>
-                <p className="text-gray-500 flex items-center">
-                  <AtSign className="h-4 w-4 mr-1" />
-                  {profileData.username}
-                </p>
-              </div>
-              
-              <p className="text-gray-700">{profileData.bio}</p>
-              
-              <div className="flex flex-wrap gap-y-2">
-                {profileData.location && (
-                  <div className="flex items-center text-gray-500 mr-4">
-                    <MapPin className="h-4 w-4 mr-1" />
-                    <span>{profileData.location}</span>
+            <div className="pt-20 pb-4">
+              {isLoadingProfile ? (
+                <div className="flex flex-col space-y-4">
+                  <div className="h-8 w-48 bg-gray-200 animate-pulse rounded"></div>
+                  <div className="h-4 w-32 bg-gray-200 animate-pulse rounded"></div>
+                  <div className="h-16 w-full bg-gray-200 animate-pulse rounded"></div>
+                  <div className="flex space-x-4">
+                    <div className="h-4 w-32 bg-gray-200 animate-pulse rounded"></div>
+                    <div className="h-4 w-32 bg-gray-200 animate-pulse rounded"></div>
                   </div>
-                )}
-                {profileData.website && (
-                  <div className="flex items-center text-blue-500 mr-4">
-                    <LinkIcon className="h-4 w-4 mr-1" />
-                    <a href={`https://${profileData.website}`} target="_blank" rel="noopener noreferrer">
-                      {profileData.website}
-                    </a>
+                </div>
+              ) : (
+                <>
+                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start profile-info">
+                    <div className="text-center sm:text-left mb-3 sm:mb-0">
+                      <h1 className="text-xl sm:text-2xl font-bold">{profileData.name}</h1>
+                      <p className="text-gray-500 text-sm sm:text-base">{profileData.username}</p>
+                    </div>
+                    <Button 
+                      onClick={() => setIsEditProfileOpen(true)}
+                      disabled={isLoadingProfile}
+                      className="w-full sm:w-auto h-10 touch-manipulation"
+                      size="sm"
+                    >
+                      <Edit className="h-3.5 w-3.5 mr-1.5 sm:mr-2" />
+                      Edit Profile
+                    </Button>
                   </div>
-                )}
-                <div className="flex items-center text-gray-500">
-                  <Calendar className="h-4 w-4 mr-1" />
-                  <span>Joined {profileData.joinDate}</span>
-                </div>
-              </div>
-              
-              <div className="flex gap-4">
-                <div className="flex items-center">
-                  <span className="font-bold mr-1">{profileData.following}</span>
-                  <span className="text-gray-500">Following</span>
-                </div>
-                <div className="flex items-center">
-                  <span className="font-bold mr-1">{profileData.followers}</span>
-                  <span className="text-gray-500">Followers</span>
-                </div>
-              </div>
-              
-              <div className="flex gap-2 pt-2">
-                <Badge variant="outline" className="bg-blue-50 text-blue-700 hover:bg-blue-100">Trader</Badge>
-                <Badge variant="outline" className="bg-green-50 text-green-700 hover:bg-green-100">Investor</Badge>
-                <Badge variant="outline" className="bg-purple-50 text-purple-700 hover:bg-purple-100">Financial Analyst</Badge>
-              </div>
+                  
+                  <p className="mt-3 sm:mt-4 text-sm sm:text-base">{profileData.bio || 'No bio provided'}</p>
+                  
+                  <div className="flex flex-col sm:flex-row sm:flex-wrap gap-y-2 mt-3 sm:mt-4 text-xs sm:text-sm text-gray-500 profile-details">
+                    {profileData.location && (
+                      <div className="flex items-center mb-1.5 sm:mb-0 sm:mr-4">
+                        <MapPin className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5" />
+                        <span className="truncate">{profileData.location}</span>
+                      </div>
+                    )}
+                    {profileData.website && (
+                      <div className="flex items-center mb-1.5 sm:mb-0 sm:mr-4">
+                        <Globe className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5" />
+                        <a href={`https://${profileData.website.replace(/^https?:\/\//, '')}`} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline truncate max-w-[200px]">
+                          {profileData.website.replace(/^https?:\/\//, '')}
+                        </a>
+                      </div>
+                    )}
+                    <div className="flex items-center mb-1.5 sm:mb-0 sm:mr-4">
+                      <Mail className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5" />
+                      <span className="truncate">{profileData.email}</span>
+                    </div>
+                    {profileData.phone && (
+                      <div className="flex items-center mb-1.5 sm:mb-0 sm:mr-4">
+                        <Phone className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5" />
+                        <span>{profileData.phone}</span>
+                      </div>
+                    )}
+                    <div className="flex items-center">
+                      <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5" />
+                      <span>Joined {profileData.joinDate}</span>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
             
             {/* Posts Section */}
-            <div className="border-t border-gray-200">
-              <div className="flex border-b">
-                <button 
-                  className={`flex-1 py-3 font-medium text-center ${activePostsTab === 'posts' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:bg-gray-50'}`}
-                  onClick={() => setActivePostsTab('posts')}
-                >
-                  Posts
-                </button>
-                <button 
-                  className={`flex-1 py-3 font-medium text-center ${activePostsTab === 'likes' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:bg-gray-50'}`}
-                  onClick={() => setActivePostsTab('likes')}
-                >
-                  Likes
-                </button>
-              </div>
-              
-              <div className="divide-y divide-gray-200">
-                {activePostsTab === 'posts' ? (
-                  userPosts.length > 0 ? (
-                    userPosts.map(post => (
-                      <PostCard key={post.id} post={post} postType="posts" />
-                    ))
-                  ) : (
-                    <div className="p-6 text-center text-gray-500">
-                      <p>No posts yet</p>
-                    </div>
-                  )
+            <Tabs defaultValue="posts" className="w-full mt-4 sm:mt-6">
+              <TabsList className="grid w-full grid-cols-2 h-10 sm:h-auto">
+                <TabsTrigger value="posts" className="text-sm sm:text-base h-10 touch-manipulation">Posts</TabsTrigger>
+                <TabsTrigger value="likes" className="text-sm sm:text-base h-10 touch-manipulation">Likes</TabsTrigger>
+              </TabsList>
+              <TabsContent value="posts" className="mt-4 sm:mt-6 space-y-3 sm:space-y-4">
+                {isLoadingPosts ? (
+                  <div className="space-y-3 sm:space-y-4">
+                    {[1, 2, 3].map(i => (
+                      <div key={i} className="border rounded-lg p-3 sm:p-4 space-y-2 sm:space-y-3">
+                        <div className="flex items-center space-x-2">
+                          <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-gray-200 animate-pulse"></div>
+                          <div className="space-y-1 flex-1">
+                            <div className="h-3 sm:h-4 w-20 sm:w-24 bg-gray-200 animate-pulse rounded"></div>
+                            <div className="h-2 sm:h-3 w-14 sm:w-16 bg-gray-200 animate-pulse rounded"></div>
+                          </div>
+                        </div>
+                        <div className="h-12 sm:h-16 w-full bg-gray-200 animate-pulse rounded"></div>
+                        <div className="h-3 sm:h-4 w-full bg-gray-200 animate-pulse rounded"></div>
+                      </div>
+                    ))}
+                  </div>
+                ) : posts.length > 0 ? (
+                  posts.map(post => (
+                    <PostCard 
+                      key={post.id}
+                      post={post}
+                      onLike={handleLikeToggle}
+                      onBookmark={handleBookmarkToggle}
+                    />
+                  ))
                 ) : (
-                  likedPosts.length > 0 ? (
-                    likedPosts.map(post => (
-                      <PostCard key={post.id} post={post} postType="likes" />
-                    ))
-                  ) : (
-                    <div className="p-6 text-center text-gray-500">
-                      <p>No liked posts yet</p>
-                    </div>
-                  )
+                  <div className="text-center py-8 sm:py-12 border rounded-lg">
+                    <FileText className="h-10 w-10 sm:h-12 sm:w-12 mx-auto text-gray-400" />
+                    <h3 className="mt-3 sm:mt-4 text-base sm:text-lg font-medium">No posts yet</h3>
+                    <p className="mt-1 sm:mt-2 text-sm sm:text-base text-gray-500">When you create posts, they'll appear here.</p>
+                  </div>
                 )}
-              </div>
-            </div>
+              </TabsContent>
+              <TabsContent value="likes" className="mt-4 sm:mt-6 space-y-3 sm:space-y-4">
+                {isLoadingPosts ? (
+                  <div className="space-y-3 sm:space-y-4">
+                    {[1, 2].map(i => (
+                      <div key={i} className="border rounded-lg p-3 sm:p-4 space-y-2 sm:space-y-3">
+                        <div className="flex items-center space-x-2">
+                          <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-gray-200 animate-pulse"></div>
+                          <div className="space-y-1 flex-1">
+                            <div className="h-3 sm:h-4 w-20 sm:w-24 bg-gray-200 animate-pulse rounded"></div>
+                            <div className="h-2 sm:h-3 w-14 sm:w-16 bg-gray-200 animate-pulse rounded"></div>
+                          </div>
+                        </div>
+                        <div className="h-12 sm:h-16 w-full bg-gray-200 animate-pulse rounded"></div>
+                        <div className="h-3 sm:h-4 w-full bg-gray-200 animate-pulse rounded"></div>
+                      </div>
+                    ))}
+                  </div>
+                ) : likedPosts.length > 0 ? (
+                  likedPosts.map(post => (
+                    <PostCard 
+                      key={post.id}
+                      post={post}
+                      onLike={handleLikeToggle}
+                      onBookmark={handleBookmarkToggle}
+                    />
+                  ))
+                ) : (
+                  <div className="text-center py-8 sm:py-12 border rounded-lg">
+                    <Heart className="h-10 w-10 sm:h-12 sm:w-12 mx-auto text-gray-400" />
+                    <h3 className="mt-3 sm:mt-4 text-base sm:text-lg font-medium">No likes yet</h3>
+                    <p className="mt-1 sm:mt-2 text-sm sm:text-base text-gray-500">Posts you like will appear here.</p>
+                  </div>
+                )}
+              </TabsContent>
+            </Tabs>
           </Card>
         </TabsContent>
 
         <TabsContent value="messages">
-          <Card className="p-0 overflow-hidden border border-border">
-            {error && (
-              <div className="bg-destructive/10 border border-destructive text-destructive px-4 py-3 relative" role="alert">
-                <span className="block sm:inline">{error}</span>
-                <span className="absolute top-0 bottom-0 right-0 px-4 py-3 cursor-pointer" onClick={() => setError(null)}>
-                  <X className="h-4 w-4" />
-                </span>
-              </div>
-            )}
-            <div className="flex h-[600px]">
-              {/* Contacts/Chats List */}
-              <div className="w-1/3 border-r border-border flex flex-col">
-                <div className="p-3 border-b border-border bg-secondary">
-                  <div className="relative">
-                    <Input 
-                      placeholder="Search contacts or messages" 
-                      className="pl-8 bg-background border-input"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                    />
-                    <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                      </svg>
-                    </div>
-                    {searchQuery && (
-                      <button 
-                        className="absolute inset-y-0 right-0 flex items-center pr-3"
-                        onClick={() => setSearchQuery('')}
-                      >
-                        <X className="h-4 w-4 text-muted-foreground hover:text-foreground" />
-                      </button>
-                    )}
-                  </div>
-                </div>
-                
-                <div className="overflow-y-auto flex-1 custom-scrollbar">
-                  {isLoadingContacts ? (
-                    <div className="flex justify-center items-center h-full">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                    </div>
-                  ) : filteredContacts.length > 0 ? (
-                    filteredContacts.map(contact => (
-                      <div 
-                        key={contact.id}
-                        className={`flex items-center p-3 border-b border-border cursor-pointer hover:bg-secondary/50 transition-colors ${selectedChat === contact.id ? 'bg-secondary' : ''}`}
-                        onClick={() => setSelectedChat(contact.id)}
-                      >
-                        <div className="relative">
-                          <Avatar className="h-12 w-12 border border-border">
-                            <AvatarImage src={contact.avatar} alt={contact.name} />
-                            <AvatarFallback className="bg-muted text-muted-foreground">{contact.name.charAt(0)}</AvatarFallback>
-                          </Avatar>
-                          {contact.status === 'online' && (
-                            <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-positive border-2 border-background"></span>
-                          )}
-                        </div>
-                        <div className="ml-3 flex-1 min-w-0">
-                          <div className="flex justify-between items-baseline">
-                            <h4 className="font-medium text-foreground truncate">{contact.name}</h4>
-                            <span className="text-xs text-muted-foreground">{contact.lastMessageTime}</span>
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <p className="text-sm text-muted-foreground truncate">{contact.lastMessage}</p>
-                            {contact.unread > 0 && (
-                              <span className="ml-2 bg-primary text-primary-foreground text-xs font-medium rounded-full h-5 w-5 flex items-center justify-center">
-                                {contact.unread}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="flex justify-center items-center h-full text-muted-foreground">
-                      {searchQuery ? 'No contacts match your search' : 'No contacts found'}
-                    </div>
-                  )}
-                </div>
-                
-                <div className="p-3 border-t border-border bg-secondary">
-                  <Button 
-                    className="w-full gap-2 bg-primary text-primary-foreground hover:bg-primary/90"
-                    onClick={() => {
-                      // In a production app, this would open a dialog to select a user
-                      // For now, we'll just refresh the conversation list
-                      setIsLoadingContacts(true);
-                      fetch('/api/messages/conversations')
-                        .then(res => res.json())
-                        .then(data => {
-                          const formattedContacts = data.map((conv: any) => ({
-                            id: conv.otherUser.id,
-                            name: conv.otherUser.name,
-                            avatar: conv.otherUser.image || '/placeholder-avatar.jpg',
-                            status: 'offline',
-                            lastMessage: conv.lastMessage.content,
-                            lastMessageTime: formatMessageTime(new Date(conv.lastMessage.timestamp)),
-                            unread: conv.unreadCount
-                          }));
-                          setContacts(formattedContacts);
-                          setIsLoadingContacts(false);
-                        })
-                        .catch(err => {
-                          console.error('Error refreshing conversations:', err);
-                          setError('Failed to refresh conversations');
-                          setIsLoadingContacts(false);
-                        });
-                    }}
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                    </svg>
-                    New Chat
-                  </Button>
-                </div>
-              </div>
-              
-              {/* Chat Area */}
-              <div className="w-2/3 flex flex-col">
-                {selectedChat ? (
-                  <>
-                    {/* Chat Header */}
-                    <div className="p-3 border-b border-border bg-secondary flex items-center justify-between">
-                      <div className="flex items-center">
-                        <Avatar className="h-10 w-10 border border-border">
-                          <AvatarImage 
-                            src={contacts.find(c => c.id === selectedChat)?.avatar} 
-                            alt={contacts.find(c => c.id === selectedChat)?.name} 
-                          />
-                          <AvatarFallback className="bg-muted text-muted-foreground">
-                            {contacts.find(c => c.id === selectedChat)?.name.charAt(0)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="ml-3">
-                          <h4 className="font-medium text-foreground">
-                            {contacts.find(c => c.id === selectedChat)?.name}
-                          </h4>
-                          {contacts.find(c => c.id === selectedChat)?.status === 'online' ? (
-                            <p className="text-xs text-positive">Online</p>
-                          ) : contacts.find(c => c.id === selectedChat)?.status === 'group' ? (
-                            <p className="text-xs text-muted-foreground">
-                              {contacts.find(c => c.id === selectedChat)?.participants?.join(', ')}
-                            </p>
-                          ) : (
-                            <p className="text-xs text-muted-foreground">Last seen today</p>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex space-x-2">
-                        <Button variant="ghost" size="sm" className="rounded-full h-8 w-8 p-0 hover:bg-secondary">
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                          </svg>
-                        </Button>
-                        <Button variant="ghost" size="sm" className="rounded-full h-8 w-8 p-0 hover:bg-secondary">
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                          </svg>
-                        </Button>
-                        <Button variant="ghost" size="sm" className="rounded-full h-8 w-8 p-0 hover:bg-secondary">
-                          <MoreHorizontal className="h-5 w-5 text-muted-foreground" />
-                        </Button>
-                      </div>
-                    </div>
-                    
-                    {/* Chat Messages */}
-                    <div className="flex-1 p-4 overflow-y-auto bg-muted/30 custom-scrollbar">
-                      {isLoadingMessages ? (
-                        <div className="flex justify-center items-center h-full">
-                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                        </div>
-                      ) : (
-                        <div className="space-y-3">
-                          {/* Date separator */}
-                          <div className="flex justify-center">
-                            <div className="bg-secondary text-muted-foreground text-xs px-2 py-1 rounded-full">
-                              Today
-                            </div>
-                          </div>
-                          
-                          {chatMessages[selectedChat || '']?.map((message: ChatMessage, index: number) => (
-                            <div 
-                              key={message.id} 
-                              className={`flex ${message.isMine ? 'justify-end' : 'justify-start'}`}
-                            >
-                              <div 
-                                className={`max-w-[70%] rounded-lg p-3 ${
-                                  message.isMine 
-                                    ? 'bg-primary text-primary-foreground rounded-br-none' 
-                                    : 'bg-card text-card-foreground rounded-bl-none border border-border'
-                                }`}
-                              >
-                                {!message.isMine && contacts.find(c => c.id === selectedChat)?.status === 'group' && (
-                                  <p className="text-xs font-medium mb-1 text-neutral">{message.sender}</p>
-                                )}
-                                <p>{message.content}</p>
-                                <div className={`text-xs mt-1 text-right flex items-center justify-end ${message.isMine ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
-                                  <span>{message.time}</span>
-                                  {message.isMine && message.status && (
-                                    <span className="ml-1">
-                                      {message.status === 'sending' && (
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                        </svg>
-                                      )}
-                                      {message.status === 'sent' && (
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                        </svg>
-                                      )}
-                                      {message.status === 'delivered' && (
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 inline" viewBox="0 0 20 20" fill="currentColor">
-                                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                        </svg>
-                                      )}
-                                      {message.status === 'read' && (
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 inline text-chart-2" viewBox="0 0 20 20" fill="currentColor">
-                                          <path d="M9.707 7.293a1 1 0 00-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L12 9.586l-2.293-2.293z" />
-                                          <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0z" clipRule="evenodd" />
-                                        </svg>
-                                      )}
-                                      {message.status === 'failed' && (
-                                        <div className="flex items-center">
-                                          <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 inline text-negative" viewBox="0 0 20 20" fill="currentColor">
-                                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                                          </svg>
-                                          <button 
-                                            className="ml-1 text-xs underline text-negative"
-                                            onClick={() => handleRetryMessage(message.id)}
-                                          >
-                                            Retry
-                                          </button>
-                                        </div>
-                                      )}
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                          
-                          {/* Typing indicator */}
-                          {isTyping && (
-                            <div className="flex justify-start">
-                              <div className="bg-card text-card-foreground rounded-lg rounded-bl-none p-3 max-w-[70%] border border-border">
-                                <div className="flex space-x-1">
-                                  <div className="h-2 w-2 bg-muted-foreground rounded-full animate-bounce"></div>
-                                  <div className="h-2 w-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                                  <div className="h-2 w-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
-                                </div>
-                              </div>
-                            </div>
-                          )}
-                          
-                          {/* This div is used for auto-scrolling to the bottom */}
-                          <div ref={messagesEndRef}></div>
-                        </div>
-                      )}
-                    </div>
-                    
-                    {/* Message Input */}
-                    <div className="p-3 border-t border-border bg-card">
-                      <div className="flex items-center space-x-2">
-                        <Button variant="ghost" size="sm" className="rounded-full h-10 w-10 p-0 hover:bg-secondary">
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                        </Button>
-                        <Button variant="ghost" size="sm" className="rounded-full h-10 w-10 p-0 hover:bg-secondary">
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-                          </svg>
-                        </Button>
-                        <Input 
-                          placeholder="Type a message" 
-                          className="rounded-full bg-background border-input"
-                          value={messageInput}
-                          onChange={(e) => {
-                            setMessageInput(e.target.value);
-                            handleTyping();
-                          }}
-                          onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-                          disabled={isLoadingMessages}
-                        />
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="rounded-full h-10 w-10 p-0 bg-primary text-primary-foreground hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground"
-                          onClick={handleSendMessage}
-                          disabled={!messageInput.trim() || isLoadingMessages}
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                          </svg>
-                        </Button>
-                      </div>
-                    </div>
-                  </>
-                ) : (
-                  <div className="flex-1 flex items-center justify-center bg-muted/30">
-                    <div className="text-center p-6">
-                      <div className="bg-secondary rounded-full h-16 w-16 flex items-center justify-center mx-auto mb-4">
-                        <MessageSquare className="h-8 w-8 text-muted-foreground" />
-                      </div>
-                      <h3 className="text-lg font-medium text-foreground">Your Messages</h3>
-                      <p className="text-muted-foreground mt-1">Select a chat to start messaging</p>
-                      <p className="text-xs text-muted-foreground mt-4 max-w-xs mx-auto">
-                        Discuss trading strategies, market insights, and investment opportunities with your network
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </Card>
+          <AccountMessaging />
+        </TabsContent>
+
+        <TabsContent value="challenges">
+          <UserChallenges />
         </TabsContent>
 
         <TabsContent value="settings">
@@ -1350,6 +1258,12 @@ export default function AccountPage() {
         <TabsContent value="ads">
           <Card className="p-0 overflow-hidden">
             <AccountAds />
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="ecommerce">
+          <Card className="p-0 overflow-hidden">
+            <EcommerceManagement />
           </Card>
         </TabsContent>
       </Tabs>

@@ -38,7 +38,7 @@ export default function WalletPage() {
       id: tx.id,
       type: tx.type,
       amount: tx.amount,
-      currency: 'USD', // Default currency
+      currency: 'TZS', // Default currency
       status: tx.status,
       date: tx.date
     }));
