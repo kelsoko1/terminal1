@@ -13,6 +13,11 @@ type ExtendedPrismaClient = PrismaClientRemote & {
   futureTrade: any;
   fxFutureOrder: any;
   fxFutureTrade: any;
+  post: any;
+  like: any;
+  share: any;
+  comment: any;
+  transaction: any;
 };
 
 // Prevent multiple instances of Prisma Client in development

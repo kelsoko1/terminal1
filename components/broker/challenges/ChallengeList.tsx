@@ -42,9 +42,9 @@ export function ChallengeList({ status }: ChallengeListProps) {
       startDate: '2024-04-01',
       endDate: '2024-04-30',
       participants: 156,
-      difficulty: 'Intermediate',
+      difficulty: 'medium',
       category: 'Performance',
-      status: 'Active',
+      status: 'active',
       createdBy: 'Broker A',
       rules: [
         'Minimum 10 trades',
@@ -64,12 +64,14 @@ export function ChallengeList({ status }: ChallengeListProps) {
 
   const getStatusColor = (status: ChallengeStatus) => {
     switch (status) {
-      case 'Active':
+      case 'active':
         return 'bg-green-500/10 text-green-500 hover:bg-green-500/20'
-      case 'Draft':
+      case 'draft':
         return 'bg-yellow-500/10 text-yellow-500 hover:bg-yellow-500/20'
-      case 'Completed':
+      case 'completed':
         return 'bg-blue-500/10 text-blue-500 hover:bg-blue-500/20'
+      case 'expired':
+        return 'bg-gray-500/10 text-gray-500 hover:bg-gray-500/20'
       default:
         return 'bg-gray-500/10 text-gray-500 hover:bg-gray-500/20'
     }
@@ -166,7 +168,7 @@ export function ChallengeList({ status }: ChallengeListProps) {
                         <Trophy className="h-4 w-4 mr-2" />
                         View Details
                       </DropdownMenuItem>
-                      {challenge.status === 'Draft' && (
+                      {challenge.status === 'draft' && (
                         <DropdownMenuItem>
                           <ArrowUpRight className="h-4 w-4 mr-2" />
                           Publish

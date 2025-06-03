@@ -10,6 +10,85 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum MarginPositionType {
+  LONG
+  SHORT
+}
+
+enum MarginPositionStatus {
+  OPEN
+  CLOSED
+  LIQUIDATED
+}
+
+model MarginPosition {
+  id                String                @id @default(uuid())
+  userId            String
+  user              User                  @relation(fields: [userId], references: [id])
+  symbol            String
+  type              MarginPositionType
+  status            MarginPositionStatus  @default(OPEN)
+  entryPrice        Float
+  currentPrice      Float
+  size              Float
+  leverage          Float
+  stopLoss          Float?
+  takeProfit        Float?
+  liquidationPrice  Float?
+  pnl               Float                 @default(0)
+  pnlPercentage     Float                 @default(0)
+  marginUsed        Float
+  trades            MarginTrade[]
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+}
+
+model MarginTrade {
+  id                String                @id @default(uuid())
+  positionId        String
+  position          MarginPosition        @relation(fields: [positionId], references: [id])
+  type              String                // OPEN, CLOSE, ADD_MARGIN, REDUCE_MARGIN
+  price             Float
+  size              Float
+  pnl               Float?
+  createdAt         DateTime              @default(now())
+}
+
+model StockPrice {
+  id                String                @id @default(uuid())
+  symbol            String
+  price             Float
+  open              Float?
+  high              Float?
+  low               Float?
+  close             Float?
+  volume            Int?
+  timestamp         DateTime              @default(now())
+  source            String?               // API source or provider
+  
+  @@index([symbol])
+  @@index([timestamp])
+}
+
+model Transaction {
+  id                String              @id @default(uuid())
+  userId            String
+  user              User                @relation(fields: [userId], references: [id])
+  amount            Float
+  type              String              // DEPOSIT, WITHDRAWAL, TRANSFER, PAYMENT
+  description       String?
+  status            TransactionStatus   @default(PENDING)
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+}
+
 model User {
   id                String         @id @default(uuid())
   email             String         @unique
@@ -36,6 +115,12 @@ model User {
   sentMessages      Message[]      @relation("SentMessages")
   receivedMessages  Message[]      @relation("ReceivedMessages")
   image             String?
+  carts             Cart[]
+  orders            Order[]
+  futureOrders      FutureOrder[]
+  fxFutureOrders    FxFutureOrder[]
+  transactions      Transaction[]
+  marginPositions   MarginPosition[]
 }
 
 model Organization {
@@ -55,6 +140,7 @@ model Organization {
   parent            Organization?  @relation("OrganizationHierarchy", fields: [parentId], references: [id])
   children          Organization[] @relation("OrganizationHierarchy")
   users             User[]
+  products          Product[]
 }
 
 model Subscription {
@@ -96,7 +182,7 @@ model Payment {
   subscription      Subscription   @relation(fields: [subscriptionId], references: [id])
   amount            Float
   currency          String         @default("USD")
-  status            PaymentStatus  @default(PENDING)
+  status            SubscriptionPaymentStatus  @default(PENDING)
   paymentMethod     String?
   transactionId     String?
   createdAt         DateTime       @default(now())
@@ -354,7 +440,7 @@ model Order {
   shippingAddress   String?
   billingAddress    String?
   paymentMethod     String?
-  paymentStatus     PaymentStatus  @default(PENDING)
+  paymentStatus     OrderPaymentStatus  @default(PENDING)
   trackingNumber    String?
   notes             String?
   createdAt         DateTime       @default(now())
@@ -379,6 +465,13 @@ enum OrderStatus {
   SHIPPED
   DELIVERED
   CANCELLED
+  REFUNDED
+}
+
+enum OrderPaymentStatus {
+  PENDING
+  PAID
+  FAILED
   REFUNDED
 }
 
@@ -511,9 +604,9 @@ enum OrderSide {
   SELL
 }
 
-enum PaymentStatus {
+enum SubscriptionPaymentStatus {
   PENDING
-  PAID
+  COMPLETED
   FAILED
   REFUNDED
 }

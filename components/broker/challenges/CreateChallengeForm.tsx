@@ -37,8 +37,8 @@ interface CreateChallengeFormProps {
 const formSchema = z.object({
   title: z.string().min(3, 'Title must be at least 3 characters'),
   description: z.string().min(10, 'Description must be at least 10 characters'),
-  category: z.enum(['Performance', 'Volume', 'Consistency']),
-  difficulty: z.enum(['Beginner', 'Intermediate', 'Advanced']),
+  category: z.enum(['Performance', 'Learning', 'Community', 'Content Creation', 'Live Streaming', 'Education']),
+  difficulty: z.enum(['easy', 'medium', 'hard', 'extreme']),
   reward: z.string().min(1, 'Reward is required'),
   startDate: z.date(),
   endDate: z.date(),
@@ -55,7 +55,7 @@ export function CreateChallengeForm({ onSuccess }: CreateChallengeFormProps) {
     resolver: zodResolver(formSchema),
     defaultValues: {
       category: 'Performance',
-      difficulty: 'Intermediate',
+      difficulty: 'medium',
       minimumBalance: 1000000,
       targetReturn: 15,
       maxParticipants: 200
@@ -73,7 +73,7 @@ export function CreateChallengeForm({ onSuccess }: CreateChallengeFormProps) {
         minimumBalance: data.minimumBalance,
         targetReturn: data.targetReturn,
         maxParticipants: data.maxParticipants,
-        status: 'Draft',
+        status: 'draft',
         progress: 0,
         participants: 0,
         startDate: data.startDate.toISOString(),
@@ -137,8 +137,11 @@ export function CreateChallengeForm({ onSuccess }: CreateChallengeFormProps) {
                   </FormControl>
                   <SelectContent>
                     <SelectItem value="Performance">Performance</SelectItem>
-                    <SelectItem value="Volume">Volume</SelectItem>
-                    <SelectItem value="Consistency">Consistency</SelectItem>
+                    <SelectItem value="Learning">Learning</SelectItem>
+                    <SelectItem value="Community">Community</SelectItem>
+                    <SelectItem value="Content Creation">Content Creation</SelectItem>
+                    <SelectItem value="Live Streaming">Live Streaming</SelectItem>
+                    <SelectItem value="Education">Education</SelectItem>
                   </SelectContent>
                 </Select>
                 <FormMessage />
@@ -159,9 +162,10 @@ export function CreateChallengeForm({ onSuccess }: CreateChallengeFormProps) {
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="Beginner">Beginner</SelectItem>
-                    <SelectItem value="Intermediate">Intermediate</SelectItem>
-                    <SelectItem value="Advanced">Advanced</SelectItem>
+                    <SelectItem value="easy">Easy</SelectItem>
+                    <SelectItem value="medium">Medium</SelectItem>
+                    <SelectItem value="hard">Hard</SelectItem>
+                    <SelectItem value="extreme">Extreme</SelectItem>
                   </SelectContent>
                 </Select>
                 <FormMessage />

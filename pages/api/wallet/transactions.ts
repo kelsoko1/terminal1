@@ -1,12 +1,21 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { prismaRemote } from '../../../lib/database/prismaClients';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/lib/auth/authOptions';
+import { getDatabase } from '@/lib/database/localDatabase';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET' && req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { userId } = req.query;
+  // Get user from session for authentication
+  const session = await getServerSession(req, res, authOptions);
+  if (!session || !session.user) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  
+  // Use userId from query or from session
+  const userId = (req.query.userId as string) || session.user.id;
   
   if (!userId) {
     return res.status(400).json({ error: 'User ID is required' });
@@ -15,67 +24,49 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   // GET: Fetch wallet transactions and summary
   if (req.method === 'GET') {
     try {
-      // Get wallet balance
-      const walletData = await prismaRemote.$queryRaw`
-        SELECT 
-          SUM(CASE WHEN status = 'COMPLETED' THEN amount ELSE 0 END) as available_balance,
-          SUM(CASE WHEN status = 'PENDING' AND amount > 0 THEN amount ELSE 0 END) as pending_deposits,
-          SUM(CASE WHEN status = 'PENDING' AND amount < 0 THEN ABS(amount) ELSE 0 END) as pending_withdrawals
-        FROM "Transaction" 
-        WHERE "userId" = ${userId as string}
-      `;
+      const db = await getDatabase();
       
-      // Format wallet data
-      const walletSummary = Array.isArray(walletData) && walletData.length > 0 ? {
-        availableBalance: Number(walletData[0].available_balance || 0),
-        pendingDeposits: Number(walletData[0].pending_deposits || 0),
-        pendingWithdrawals: Number(walletData[0].pending_withdrawals || 0)
-      } : {
-        availableBalance: 0,
-        pendingDeposits: 0,
-        pendingWithdrawals: 0
-      };
+      // Get all transactions for the user using Prisma client
+      const transactions = await db.transaction.findMany({
+        where: {
+          userId: userId
+        },
+        orderBy: {
+          createdAt: 'desc'
+        },
+        take: 20
+      });
       
-      // Get transaction history
-      const transactions = await prismaRemote.$queryRaw`
-        SELECT 
-          id,
-          type,
-          amount,
-          status,
-          description,
-          "createdAt"
-        FROM "Transaction"
-        WHERE "userId" = ${userId as string}
-        ORDER BY "createdAt" DESC
-        LIMIT 20
-      `;
+      // Calculate wallet summary from transactions
+      const completedTransactions = transactions.filter((t: any) => t.status === 'COMPLETED');
       
-      // Group transactions by type for filtering
-      const deposits = Array.isArray(transactions) 
-        ? transactions.filter((t: any) => t.amount > 0 && t.type !== 'FEE')
-        : [];
+      // Calculate total deposits and withdrawals
+      const totalDeposits = completedTransactions
+        .filter((t: any) => t.type === 'DEPOSIT')
+        .reduce((sum: number, t: any) => sum + Number(t.amount), 0);
         
-      const withdrawals = Array.isArray(transactions)
-        ? transactions.filter((t: any) => t.amount < 0 && t.type !== 'FEE')
-        : [];
+      const totalWithdrawals = completedTransactions
+        .filter((t: any) => t.type === 'WITHDRAWAL')
+        .reduce((sum: number, t: any) => sum + Number(t.amount), 0);
+        
+      // Calculate current balance
+      const balance = totalDeposits - totalWithdrawals;
       
       return res.status(200).json({
-        summary: walletSummary,
-        transactions: Array.isArray(transactions) ? transactions : [],
-        deposits,
-        withdrawals
+        transactions,
+        summary: {
+          balance,
+          totalDeposits,
+          totalWithdrawals
+        }
       });
     } catch (error) {
-      console.error('Error fetching wallet data:', error);
-      return res.status(500).json({ 
-        error: 'Failed to fetch wallet data',
-        message: error instanceof Error ? error.message : 'Unknown error'
-      });
+      console.error('Error fetching transactions:', error);
+      return res.status(500).json({ error: 'Failed to fetch transactions' });
     }
   }
   
-  // POST: Add a new transaction (deposit or withdrawal)
+  // POST: Create a new transaction
   if (req.method === 'POST') {
     try {
       const { amount, type, description } = req.body;
@@ -84,55 +75,42 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(400).json({ error: 'Amount and type are required' });
       }
       
+      const db = await getDatabase();
+      
       // Validate amount based on transaction type
       const transactionAmount = type.toLowerCase() === 'deposit' 
         ? Math.abs(Number(amount)) 
         : -Math.abs(Number(amount));
       
-      // Create transaction record
-      await prismaRemote.$queryRaw`
-        INSERT INTO "Transaction" (
-          id, 
-          "userId", 
-          amount, 
-          type, 
-          description, 
-          status, 
-          "createdAt"
-        )
-        VALUES (
-          gen_random_uuid(), 
-          ${userId as string}, 
-          ${transactionAmount}, 
-          ${type.toUpperCase()}, 
-          ${description || (type === 'deposit' ? 'Deposit' : 'Withdrawal')}, 
-          'COMPLETED', 
-          ${new Date()}
-        )
-      `;
+      // Insert new transaction using Prisma client
+      const transaction = await db.transaction.create({
+        data: {
+          userId,
+          amount: transactionAmount,
+          type: type.toUpperCase(),
+          description: description || (type === 'deposit' ? 'Deposit' : 'Withdrawal'),
+          status: 'COMPLETED'
+        }
+      });
       
-      // Get updated wallet balance
-      const updatedWallet = await prismaRemote.$queryRaw`
-        SELECT SUM(amount) as balance
-        FROM "Transaction"
-        WHERE "userId" = ${userId as string} AND status = 'COMPLETED'
-      `;
+      // Get all completed transactions to calculate balance
+      const completedTransactions = await db.transaction.findMany({
+        where: {
+          userId,
+          status: 'COMPLETED'
+        }
+      });
       
-      const balance = Array.isArray(updatedWallet) && updatedWallet.length > 0
-        ? Number(updatedWallet[0].balance || 0)
-        : 0;
+      // Calculate current balance
+      const balance = completedTransactions.reduce((sum: number, t: any) => sum + Number(t.amount), 0);
       
       return res.status(201).json({
-        success: true,
-        message: `${type} processed successfully`,
+        transaction,
         balance
       });
     } catch (error) {
-      console.error('Error processing transaction:', error);
-      return res.status(500).json({ 
-        error: 'Failed to process transaction',
-        message: error instanceof Error ? error.message : 'Unknown error'
-      });
+      console.error('Error creating transaction:', error);
+      return res.status(500).json({ error: 'Failed to create transaction' });
     }
   }
 }

@@ -1,6 +1,6 @@
-export type ChallengeDifficulty = 'Beginner' | 'Intermediate' | 'Advanced'
-export type ChallengeCategory = 'Performance' | 'Learning' | 'Community'
-export type ChallengeStatus = 'Draft' | 'Active' | 'Completed' | 'Cancelled'
+export type ChallengeDifficulty = 'easy' | 'medium' | 'hard' | 'extreme'
+export type ChallengeCategory = 'Performance' | 'Learning' | 'Community' | 'Content Creation' | 'Live Streaming' | 'Education'
+export type ChallengeStatus = 'active' | 'completed' | 'expired' | 'draft'
 
 export interface Challenge {
   id: string

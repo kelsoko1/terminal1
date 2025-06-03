@@ -7,8 +7,10 @@ import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { toast } from 'sonner'
-import { marginTradeService } from '@/lib/services/marginTradeService'
+import { marginTradeService, MarginTradeRequest } from '@/lib/services/marginTradeService'
 import { TrendingUp, TrendingDown, DollarSign, Scale, Target, Shield } from 'lucide-react'
+import { useSession } from 'next-auth/react'
+import { Session } from 'next-auth'
 
 interface MarginTradeModalProps {
   isOpen: boolean
@@ -16,10 +18,18 @@ interface MarginTradeModalProps {
 }
 
 export default function MarginTradeModal({ isOpen, onClose }: MarginTradeModalProps) {
+  const { data: session } = useSession()
+  // Define extended session type to include id
+  type ExtendedUser = {
+    id: string;
+    name?: string | null;
+    email?: string | null;
+    image?: string | null;
+  }
   const [symbol, setSymbol] = React.useState('')
   const [amount, setAmount] = React.useState('')
   const [leverage, setLeverage] = React.useState('2')
-  const [type, setType] = React.useState<'long' | 'short'>('long')
+  const [type, setType] = React.useState<'LONG' | 'SHORT'>('LONG')
   const [stopLoss, setStopLoss] = React.useState('')
   const [takeProfit, setTakeProfit] = React.useState('')
   const [isSubmitting, setIsSubmitting] = React.useState(false)
@@ -29,19 +39,24 @@ export default function MarginTradeModal({ isOpen, onClose }: MarginTradeModalPr
     setIsSubmitting(true)
 
     try {
-      if (!symbol || !amount || !leverage || !type) {
+      if (!symbol || !amount || !leverage || !type || !session?.user) {
+        toast.error('Please fill in all required fields or sign in')
         toast.error('Please fill in all required fields')
+        setIsSubmitting(false)
         return
       }
 
-      const success = await marginTradeService.placeTrade({
+      const tradeRequest: MarginTradeRequest = {
+        userId: (session.user as ExtendedUser).id,
         symbol,
         type,
         amount: parseFloat(amount),
         leverage: parseFloat(leverage),
         stopLoss: stopLoss ? parseFloat(stopLoss) : undefined,
         takeProfit: takeProfit ? parseFloat(takeProfit) : undefined
-      })
+      }
+      
+      const success = await marginTradeService.placeTrade(tradeRequest)
 
       if (success) {
         onClose()
@@ -49,7 +64,7 @@ export default function MarginTradeModal({ isOpen, onClose }: MarginTradeModalPr
         setSymbol('')
         setAmount('')
         setLeverage('2')
-        setType('long')
+        setType('LONG')
         setStopLoss('')
         setTakeProfit('')
       }
@@ -82,18 +97,18 @@ export default function MarginTradeModal({ isOpen, onClose }: MarginTradeModalPr
           </div>
           <div className="grid gap-2">
             <Label htmlFor="type" className="text-muted-foreground">Order Type</Label>
-            <Select value={type} onValueChange={(value: 'long' | 'short') => setType(value)}>
-              <SelectTrigger className={`bg-white/50 dark:bg-white/5 ${type === 'long' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+            <Select value={type} onValueChange={(value) => setType(value as 'LONG' | 'SHORT')}>
+              <SelectTrigger className={`bg-white/50 dark:bg-white/5 ${type === 'LONG' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                 <SelectValue placeholder="Select type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="long" className="text-green-600 dark:text-green-400">
+                <SelectItem value="LONG" className="text-green-600 dark:text-green-400">
                   <div className="flex items-center">
                     <TrendingUp className="h-4 w-4 mr-2" />
                     Buy Long
                   </div>
                 </SelectItem>
-                <SelectItem value="short" className="text-red-600 dark:text-red-400">
+                <SelectItem value="SHORT" className="text-red-600 dark:text-red-400">
                   <div className="flex items-center">
                     <TrendingDown className="h-4 w-4 mr-2" />
                     Sell Short

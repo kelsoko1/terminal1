@@ -13,8 +13,8 @@ interface Challenge {
   progress: number;
   endDate: string;
   participants: number;
-  difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
-  category: 'Performance' | 'Learning' | 'Community';
+  difficulty: 'easy' | 'medium' | 'hard' | 'extreme';
+  category: 'Performance' | 'Learning' | 'Community' | 'Content Creation' | 'Live Streaming' | 'Education';
   isJoined?: boolean;
 }
 
@@ -27,7 +27,7 @@ const initialChallenges: Challenge[] = [
     progress: 60,
     endDate: '2024-04-30',
     participants: 234,
-    difficulty: 'Beginner',
+    difficulty: 'easy',
     category: 'Learning',
     isJoined: false
   },
@@ -39,7 +39,7 @@ const initialChallenges: Challenge[] = [
     progress: 45,
     endDate: '2024-05-15',
     participants: 156,
-    difficulty: 'Intermediate',
+    difficulty: 'medium',
     category: 'Performance',
     isJoined: false
   },
@@ -51,7 +51,7 @@ const initialChallenges: Challenge[] = [
     progress: 80,
     endDate: '2024-04-20',
     participants: 89,
-    difficulty: 'Advanced',
+    difficulty: 'hard',
     category: 'Community',
     isJoined: false
   }
@@ -94,8 +94,8 @@ export function TradingChallenges() {
                 <div className="flex items-center gap-2">
                   <h3 className="font-semibold">{challenge.title}</h3>
                   <Badge variant={
-                    challenge.difficulty === 'Beginner' ? 'default' :
-                    challenge.difficulty === 'Intermediate' ? 'secondary' : 'destructive'
+                    challenge.difficulty === 'easy' ? 'default' :
+                    challenge.difficulty === 'medium' ? 'secondary' : 'destructive'
                   }>
                     {challenge.difficulty}
                   </Badge>
