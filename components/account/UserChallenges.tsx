@@ -28,6 +28,7 @@ export function UserChallenges() {
         // In a real app, you would filter by user ID from auth context
         setChallenges(fetchedChallenges)
       } catch (error) {
+        console.error("Error loading challenges:", error);
         toast({ title: 'Error', description: 'Failed to load challenges', variant: 'destructive' })
       } finally {
         setIsLoading(false)
@@ -39,9 +40,9 @@ export function UserChallenges() {
   // Filter challenges based on the active tab
   const filteredChallenges = challenges.filter(challenge => {
     if (activeTab === 'all') return true
-    if (activeTab === 'active') return !challenge.isCompleted && challenge.status !== 'rejected'
-    if (activeTab === 'completed') return challenge.isCompleted || challenge.status === 'approved'
-    if (activeTab === 'created') return challenge.createdByCurrentUser
+    if (activeTab === 'active') return challenge.status === 'active'
+    if (activeTab === 'completed') return challenge.status === 'completed' || challenge.status === 'approved'
+    if (activeTab === 'created') return challenge.createdBy === 'currentUser' // Assuming a createdBy field
     return true
   })
 
@@ -57,7 +58,7 @@ export function UserChallenges() {
 
   // Get challenge status badge
   const getChallengeStatusBadge = (challenge: UnifiedChallenge) => {
-    if (challenge.isCompleted || challenge.status === 'approved') {
+    if (challenge.status === 'completed' || challenge.status === 'approved') {
       return <Badge className="bg-green-500 hover:bg-green-600">Completed</Badge>
     } else if (challenge.status === 'rejected') {
       return <Badge className="bg-red-500 hover:bg-red-600">Rejected</Badge>
@@ -145,7 +146,7 @@ export function UserChallenges() {
                           <div className="flex items-center gap-4 text-sm text-gray-500 mb-3">
                             <div className="flex items-center">
                               <Trophy className="h-4 w-4 mr-1 text-yellow-500" />
-                              <span>{challenge.prizeAmount} points</span>
+                              <span>{challenge.reward} points</span>
                             </div>
                             {challenge.expiresAt && (
                               <div className="flex items-center">
@@ -178,7 +179,7 @@ export function UserChallenges() {
                           {challenge.createdAt && `Created: ${formatDate(challenge.createdAt)}`}
                         </div>
                         <div className="flex gap-2">
-                          {!challenge.isCompleted && challenge.status !== 'approved' && challenge.status !== 'rejected' && (
+                          {challenge.status === 'active' && (
                             <Button 
                               size="sm" 
                               variant="outline" 
@@ -187,7 +188,7 @@ export function UserChallenges() {
                               Submit Proof
                             </Button>
                           )}
-                          {challenge.createdByCurrentUser && (
+                          {challenge.createdBy === 'currentUser' && (
                             <Button 
                               size="sm" 
                               variant="outline" 

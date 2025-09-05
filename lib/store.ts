@@ -1,8 +1,8 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { Stock, User, Trade } from './types';
-import { databases, STOCKS_COLLECTION_ID, TRADES_COLLECTION_ID, DATABASE_ID } from './appwrite';
-import { Query } from 'appwrite';
+// import { databases, STOCKS_COLLECTION_ID, TRADES_COLLECTION_ID, DATABASE_ID } from './appwrite';
+// import { Query } from 'appwrite';
 
 // Initialize with empty trades array
 const initialTrades: Trade[] = [];
@@ -97,17 +97,9 @@ export const useStore = create<StoreState>()(
       
       addTrade: async (trade) => {
         try {
-          // Add trade to Appwrite
-          await databases.createDocument(
-            DATABASE_ID,
-            TRADES_COLLECTION_ID,
-            'unique()',
-            {
-              ...trade,
-              timestamp: trade.timestamp.toISOString(),
-              userId: get().user?.$id
-            }
-          );
+          // Add trade to Firebase
+          // This will be replaced with a call to your Firebase service
+          console.log("Adding trade (to be implemented with Firebase):", trade);
 
           // Update local state
           set((state) => ({ 

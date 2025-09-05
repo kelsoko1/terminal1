@@ -1,97 +1,54 @@
-import { PrismaClient } from '@prisma/client';
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
 
-const prisma = new PrismaClient();
-
-export interface User {
-  id: string;
-  email: string;
-  name?: string;
-  role: string;
-}
-
-export interface AuthResult {
-  user: User;
-  token: string;
-}
+import { auth } from '@/lib/firebase';
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged,
+  GoogleAuthProvider,
+  signInWithPopup,
+  User as FirebaseUser
+} from 'firebase/auth';
 
 export class AuthService {
-  async validateUser(email: string, password: string): Promise<User | null> {
-    try {
-      const user = await prisma.user.findUnique({
-        where: { email }
+  // Method to get the current user
+  getCurrentUser(): Promise<FirebaseUser | null> {
+    return new Promise((resolve) => {
+      const unsubscribe = onAuthStateChanged(auth, (user) => {
+        unsubscribe();
+        resolve(user);
       });
-
-      if (!user) return null;
-
-      const isPasswordValid = await bcrypt.compare(password, user.password);
-      if (!isPasswordValid) return null;
-
-      return {
-        id: user.id,
-        email: user.email,
-        name: user.name || undefined,
-        role: user.role
-      };
-    } catch (error) {
-      console.error('Error validating user:', error);
-      return null;
-    }
+    });
   }
 
-  async getUserById(userId: string): Promise<User | null> {
-    try {
-      const user = await prisma.user.findUnique({
-        where: { id: userId }
-      });
-
-      if (!user) return null;
-
-      return {
-        id: user.id,
-        email: user.email,
-        name: user.name || undefined,
-        role: user.role
-      };
-    } catch (error) {
-      console.error('Error getting user by ID:', error);
-      return null;
-    }
+  // Method to sign up with email and password
+  async signUp(email: string, password: string): Promise<FirebaseUser> {
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    return userCredential.user;
   }
 
-  generateToken(user: User): string {
-    const secret = process.env.JWT_SECRET || 'fallback-secret-key';
-    const expiresIn = process.env.JWT_EXPIRY || '24h';
-
-    return jwt.sign(
-      { 
-        id: user.id,
-        email: user.email,
-        role: user.role 
-      },
-      secret,
-      { expiresIn }
-    );
+  // Method to sign in with email and password
+  async signIn(email: string, password: string): Promise<FirebaseUser> {
+    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+    return userCredential.user;
   }
 
-  verifyToken(token: string): User | null {
-    try {
-      const secret = process.env.JWT_SECRET || 'fallback-secret-key';
-      const decoded = jwt.verify(token, secret) as any;
-      
-      return {
-        id: decoded.id,
-        email: decoded.email,
-        role: decoded.role,
-        name: decoded.name
-      };
-    } catch (error) {
-      console.error('Error verifying token:', error);
-      return null;
-    }
+  // Method to sign in with Google
+  async signInWithGoogle(): Promise<FirebaseUser> {
+    const provider = new GoogleAuthProvider();
+    const result = await signInWithPopup(auth, provider);
+    return result.user;
+  }
+
+  // Method to sign out
+  async signOut(): Promise<void> {
+    await signOut(auth);
+  }
+
+  // Method to listen for auth state changes
+  onAuthStateChanged(callback: (user: FirebaseUser | null) => void) {
+    return onAuthStateChanged(auth, callback);
   }
 }
 
-// Export a singleton instance
 export const authService = new AuthService();
