@@ -1,0 +1,257 @@
+[debug] [2025-09-12T12:58:11.995Z] ----------------------------------------------------------------------
+[debug] [2025-09-12T12:58:11.997Z] Command:       /nix/store/ws50yvm6vzlzf7jzz6n7xh4szddrack1-nodejs-20.19.1/bin/node /nix/store/wma3rvxxva78rqvnpja82nx5b3mclpxg-firebase-tools-14.15.2/lib/node_modules/firebase-tools/lib/bin/firebase.js deploy --only hosting
+[debug] [2025-09-12T12:58:11.997Z] CLI Version:   14.15.2
+[debug] [2025-09-12T12:58:11.997Z] Platform:      linux
+[debug] [2025-09-12T12:58:11.998Z] Node Version:  v20.19.1
+[debug] [2025-09-12T12:58:11.998Z] Time:          Fri Sep 12 2025 12:58:11 GMT+0000 (Coordinated Universal Time)
+[debug] [2025-09-12T12:58:11.998Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2025-09-12T12:58:12.198Z] No OAuth tokens found
+[debug] [2025-09-12T12:58:12.199Z] No OAuth tokens found
+[error] Failed to fetch Firebase Project from current Studio Workspace: Unable to refresh auth: not yet authenticated.
+[debug] [2025-09-12T12:58:12.202Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform","https://www.googleapis.com/auth/userinfo.email"]
+[debug] [2025-09-12T12:58:12.202Z] > authorizing via signed-in user (elvinasenga@gmail.com)
+[debug] [2025-09-12T12:58:12.202Z] [iam] checking project kelsoko-bddc4 for permissions ["firebase.projects.get","firebasehosting.sites.update"]
+[debug] [2025-09-12T12:58:12.203Z] No OAuth tokens found
+[debug] [2025-09-12T12:58:12.203Z] No OAuth tokens found
+[debug] [2025-09-12T12:58:12.203Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform","https://www.googleapis.com/auth/userinfo.email"]
+[debug] [2025-09-12T12:58:12.203Z] > authorizing via signed-in user (elvinasenga@gmail.com)
+[debug] [2025-09-12T12:58:12.204Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/kelsoko-bddc4:testIamPermissions [none]
+[debug] [2025-09-12T12:58:12.204Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/kelsoko-bddc4:testIamPermissions x-goog-quota-user=projects/kelsoko-bddc4
+[debug] [2025-09-12T12:58:12.204Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/kelsoko-bddc4:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2025-09-12T12:58:12.843Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/kelsoko-bddc4:testIamPermissions 200
+[debug] [2025-09-12T12:58:12.843Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/kelsoko-bddc4:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2025-09-12T12:58:12.844Z] No OAuth tokens found
+[debug] [2025-09-12T12:58:12.844Z] No OAuth tokens found
+[debug] [2025-09-12T12:58:12.844Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform","https://www.googleapis.com/auth/userinfo.email"]
+[debug] [2025-09-12T12:58:12.844Z] > authorizing via signed-in user (elvinasenga@gmail.com)
+[debug] [2025-09-12T12:58:12.844Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/kelsoko-bddc4 [none]
+[debug] [2025-09-12T12:58:13.051Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/kelsoko-bddc4 200
+[debug] [2025-09-12T12:58:13.052Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/kelsoko-bddc4 {"projectId":"kelsoko-bddc4","projectNumber":"605278507250","displayName":"kelsoko","name":"projects/kelsoko-bddc4","resources":{"hostingSite":"kelsoko-bddc4"},"state":"ACTIVE","etag":"1_097ca654-0f6c-41ae-9d50-9e72f02decdf"}
+[debug] [2025-09-12T12:58:16.424Z] defaultcredentials: no credential available.
+[debug] [2025-09-12T12:58:16.424Z] No OAuth tokens found
+[debug] [2025-09-12T12:58:16.424Z] No OAuth tokens found
+[debug] [2025-09-12T12:58:16.424Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform","https://www.googleapis.com/auth/userinfo.email"]
+[debug] [2025-09-12T12:58:16.424Z] > authorizing via signed-in user (elvinasenga@gmail.com)
+[debug] [2025-09-12T12:58:16.425Z] >>> [apiv2][query] GET https://firebasehosting.googleapis.com/v1beta1/projects/kelsoko-bddc4/sites pageToken=&pageSize=10
+[debug] [2025-09-12T12:58:17.278Z] <<< [apiv2][status] GET https://firebasehosting.googleapis.com/v1beta1/projects/kelsoko-bddc4/sites 200
+[debug] [2025-09-12T12:58:17.279Z] <<< [apiv2][body] GET https://firebasehosting.googleapis.com/v1beta1/projects/kelsoko-bddc4/sites {"sites":[{"name":"projects/kelsoko-bddc4/sites/kelsoko-bddc4","defaultUrl":"https://kelsoko-bddc4.web.app","type":"DEFAULT_SITE"}]}
+[debug] [2025-09-12T12:58:17.279Z] No OAuth tokens found
+[debug] [2025-09-12T12:58:17.279Z] No OAuth tokens found
+[debug] [2025-09-12T12:58:17.279Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform","https://www.googleapis.com/auth/userinfo.email"]
+[debug] [2025-09-12T12:58:17.280Z] > authorizing via signed-in user (elvinasenga@gmail.com)
+[debug] [2025-09-12T12:58:17.280Z] >>> [apiv2][query] GET https://firebasehosting.googleapis.com/v1beta1/projects/kelsoko-bddc4/sites 
+[debug] [2025-09-12T12:58:17.582Z] <<< [apiv2][status] GET https://firebasehosting.googleapis.com/v1beta1/projects/kelsoko-bddc4/sites 200
+[debug] [2025-09-12T12:58:17.582Z] <<< [apiv2][body] GET https://firebasehosting.googleapis.com/v1beta1/projects/kelsoko-bddc4/sites {"sites":[{"name":"projects/kelsoko-bddc4/sites/kelsoko-bddc4","defaultUrl":"https://kelsoko-bddc4.web.app","type":"DEFAULT_SITE"}]}
+[debug] [2025-09-12T12:58:17.583Z] No OAuth tokens found
+[debug] [2025-09-12T12:58:17.583Z] No OAuth tokens found
+[debug] [2025-09-12T12:58:17.583Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform","https://www.googleapis.com/auth/userinfo.email"]
+[debug] [2025-09-12T12:58:17.583Z] > authorizing via signed-in user (elvinasenga@gmail.com)
+[debug] [2025-09-12T12:58:17.583Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/kelsoko-bddc4/webApps/-/config [none]
+[debug] [2025-09-12T12:58:18.142Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/kelsoko-bddc4/webApps/-/config 200
+[debug] [2025-09-12T12:58:18.142Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/kelsoko-bddc4/webApps/-/config {"projectId":"kelsoko-bddc4","appId":"1:605278507250:web:29b7b82a7b96bdc8be006b","storageBucket":"kelsoko-bddc4.firebasestorage.app","apiKey":"AIzaSyBm5gnFQofXAOCBpod4OQrwLWDrPy-OTzY","authDomain":"kelsoko-bddc4.firebaseapp.com","messagingSenderId":"605278507250","measurementId":"G-1SLTEG770E"}
+[info] 
+   Thank you for trying our early preview of Next.js support on Firebase Hosting.
+   During the preview, support is best-effort and breaking changes can be expected. Proceed with caution.
+
+   Documentation: https://firebase.google.com/docs/hosting/frameworks/nextjs
+   File a bug: https://github.com/firebase/firebase-tools/issues/new?template=bug_report.md
+   Submit a feature request: https://github.com/firebase/firebase-tools/issues/new?template=feature_request.md
+
+   We'd love to learn from you. Express your interest in helping us shape the future of Firebase Hosting: https://goo.gle/41enW5X
+
+[debug] [2025-09-12T12:58:24.260Z] No OAuth tokens found
+[debug] [2025-09-12T12:58:24.260Z] No OAuth tokens found
+[debug] [2025-09-12T12:58:24.260Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform","https://www.googleapis.com/auth/userinfo.email"]
+[debug] [2025-09-12T12:58:24.260Z] > authorizing via signed-in user (elvinasenga@gmail.com)
+[debug] [2025-09-12T12:58:24.260Z] >>> [apiv2][query] GET https://firebasehosting.googleapis.com/v1beta1/projects/kelsoko-bddc4/sites/kelsoko-bddc4 [none]
+[debug] [2025-09-12T12:58:24.982Z] <<< [apiv2][status] GET https://firebasehosting.googleapis.com/v1beta1/projects/kelsoko-bddc4/sites/kelsoko-bddc4 200
+[debug] [2025-09-12T12:58:24.982Z] <<< [apiv2][body] GET https://firebasehosting.googleapis.com/v1beta1/projects/kelsoko-bddc4/sites/kelsoko-bddc4 {"name":"projects/kelsoko-bddc4/sites/kelsoko-bddc4","defaultUrl":"https://kelsoko-bddc4.web.app","type":"DEFAULT_SITE"}
+[info]   ▲ Next.js 14.2.30
+
+[info]   - Environments: .env
+
+
+[info]    Creating an optimized production build ...
+
+[info]  ⚠ Found lockfile missing swc dependencies, patching...
+
+[info]  ⚠ Lockfile was successfully patched, please run "npm install" to ensure @next/swc dependencies are downloaded
+
+[info]  ⚠ Compiled with warnings
+
+./app/api/prediction-markets/[id]/route.ts
+Attempted import error: 'markets' is not exported from '../route' (imported as 'mainRoute').
+
+Import trace for requested module:
+./app/api/prediction-markets/[id]/route.ts
+
+./app/api/prediction-markets/[id]/route.ts
+Attempted import error: 'outcomes' is not exported from '../route' (imported as 'mainRoute').
+
+Import trace for requested module:
+./app/api/prediction-markets/[id]/route.ts
+
+./app/api/prediction-markets/[id]/route.ts
+Attempted import error: 'markets' is not exported from '../route' (imported as 'mainRoute').
+
+Import trace for requested module:
+./app/api/prediction-markets/[id]/route.ts
+
+./app/api/prediction-markets/[id]/route.ts
+Attempted import error: 'outcomes' is not exported from '../route' (imported as 'mainRoute').
+
+Import trace for requested module:
+./app/api/prediction-markets/[id]/route.ts
+
+[info] 
+
+[info]    Skipping linting
+
+[info]    Checking validity of types ...
+
+[info] Failed to compile.
+
+
+[info] ./app/api/search/ai/route.ts:32:7
+Type error: No value exists in scope for the shorthand property 'aiAnalysis'. Either declare one or provide an initializer.
+
+  30 |     return NextResponse.json({
+  31 |       query: searchQuery,
+> 32 |       aiAnalysis,
+     |       ^
+  33 |       results,
+  34 |       insights: searchInsights,
+  35 |       totalResults: allResults.length
+
+[info] Next.js build worker exited with code: 1 and signal: null
+
+[debug] [2025-09-12T12:59:21.266Z] Error: ENOENT: no such file or directory, open '/home/user/terminal1/.next/export-marker.json'
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2025-09-12T13:00:11.233Z] ----------------------------------------------------------------------
+[debug] [2025-09-12T13:00:11.235Z] Command:       /nix/store/ws50yvm6vzlzf7jzz6n7xh4szddrack1-nodejs-20.19.1/bin/node /nix/store/wma3rvxxva78rqvnpja82nx5b3mclpxg-firebase-tools-14.15.2/lib/node_modules/firebase-tools/lib/bin/firebase.js deploy --only hosting
+[debug] [2025-09-12T13:00:11.236Z] CLI Version:   14.15.2
+[debug] [2025-09-12T13:00:11.236Z] Platform:      linux
+[debug] [2025-09-12T13:00:11.236Z] Node Version:  v20.19.1
+[debug] [2025-09-12T13:00:11.236Z] Time:          Fri Sep 12 2025 13:00:11 GMT+0000 (Coordinated Universal Time)
+[debug] [2025-09-12T13:00:11.236Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2025-09-12T13:00:11.452Z] No OAuth tokens found
+[debug] [2025-09-12T13:00:11.453Z] No OAuth tokens found
+[error] Failed to fetch Firebase Project from current Studio Workspace: Unable to refresh auth: not yet authenticated.
+[debug] [2025-09-12T13:00:11.456Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform","https://www.googleapis.com/auth/userinfo.email"]
+[debug] [2025-09-12T13:00:11.457Z] > authorizing via signed-in user (elvinasenga@gmail.com)
+[debug] [2025-09-12T13:00:11.457Z] [iam] checking project kelsoko-bddc4 for permissions ["firebase.projects.get","firebasehosting.sites.update"]
+[debug] [2025-09-12T13:00:11.457Z] No OAuth tokens found
+[debug] [2025-09-12T13:00:11.458Z] No OAuth tokens found
+[debug] [2025-09-12T13:00:11.458Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform","https://www.googleapis.com/auth/userinfo.email"]
+[debug] [2025-09-12T13:00:11.458Z] > authorizing via signed-in user (elvinasenga@gmail.com)
+[debug] [2025-09-12T13:00:11.459Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/kelsoko-bddc4:testIamPermissions [none]
+[debug] [2025-09-12T13:00:11.459Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/kelsoko-bddc4:testIamPermissions x-goog-quota-user=projects/kelsoko-bddc4
+[debug] [2025-09-12T13:00:11.459Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/kelsoko-bddc4:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2025-09-12T13:00:12.115Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/kelsoko-bddc4:testIamPermissions 200
+[debug] [2025-09-12T13:00:12.115Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/kelsoko-bddc4:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2025-09-12T13:00:12.116Z] No OAuth tokens found
+[debug] [2025-09-12T13:00:12.117Z] No OAuth tokens found
+[debug] [2025-09-12T13:00:12.117Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform","https://www.googleapis.com/auth/userinfo.email"]
+[debug] [2025-09-12T13:00:12.117Z] > authorizing via signed-in user (elvinasenga@gmail.com)
+[debug] [2025-09-12T13:00:12.117Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/kelsoko-bddc4 [none]
+[debug] [2025-09-12T13:00:12.334Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/kelsoko-bddc4 200
+[debug] [2025-09-12T13:00:12.334Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/kelsoko-bddc4 {"projectId":"kelsoko-bddc4","projectNumber":"605278507250","displayName":"kelsoko","name":"projects/kelsoko-bddc4","resources":{"hostingSite":"kelsoko-bddc4"},"state":"ACTIVE","etag":"1_097ca654-0f6c-41ae-9d50-9e72f02decdf"}
+[debug] [2025-09-12T13:00:16.695Z] defaultcredentials: no credential available.
+[debug] [2025-09-12T13:00:16.696Z] No OAuth tokens found
+[debug] [2025-09-12T13:00:16.696Z] No OAuth tokens found
+[debug] [2025-09-12T13:00:16.696Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform","https://www.googleapis.com/auth/userinfo.email"]
+[debug] [2025-09-12T13:00:16.696Z] > authorizing via signed-in user (elvinasenga@gmail.com)
+[debug] [2025-09-12T13:00:16.697Z] >>> [apiv2][query] GET https://firebasehosting.googleapis.com/v1beta1/projects/kelsoko-bddc4/sites pageToken=&pageSize=10
+[debug] [2025-09-12T13:00:17.507Z] <<< [apiv2][status] GET https://firebasehosting.googleapis.com/v1beta1/projects/kelsoko-bddc4/sites 200
+[debug] [2025-09-12T13:00:17.507Z] <<< [apiv2][body] GET https://firebasehosting.googleapis.com/v1beta1/projects/kelsoko-bddc4/sites {"sites":[{"name":"projects/kelsoko-bddc4/sites/kelsoko-bddc4","defaultUrl":"https://kelsoko-bddc4.web.app","type":"DEFAULT_SITE"}]}
+[debug] [2025-09-12T13:00:17.508Z] No OAuth tokens found
+[debug] [2025-09-12T13:00:17.508Z] No OAuth tokens found
+[debug] [2025-09-12T13:00:17.508Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform","https://www.googleapis.com/auth/userinfo.email"]
+[debug] [2025-09-12T13:00:17.508Z] > authorizing via signed-in user (elvinasenga@gmail.com)
+[debug] [2025-09-12T13:00:17.509Z] >>> [apiv2][query] GET https://firebasehosting.googleapis.com/v1beta1/projects/kelsoko-bddc4/sites 
+[debug] [2025-09-12T13:00:17.769Z] <<< [apiv2][status] GET https://firebasehosting.googleapis.com/v1beta1/projects/kelsoko-bddc4/sites 200
+[debug] [2025-09-12T13:00:17.769Z] <<< [apiv2][body] GET https://firebasehosting.googleapis.com/v1beta1/projects/kelsoko-bddc4/sites {"sites":[{"name":"projects/kelsoko-bddc4/sites/kelsoko-bddc4","defaultUrl":"https://kelsoko-bddc4.web.app","type":"DEFAULT_SITE"}]}
+[debug] [2025-09-12T13:00:17.770Z] No OAuth tokens found
+[debug] [2025-09-12T13:00:17.771Z] No OAuth tokens found
+[debug] [2025-09-12T13:00:17.771Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform","https://www.googleapis.com/auth/userinfo.email"]
+[debug] [2025-09-12T13:00:17.771Z] > authorizing via signed-in user (elvinasenga@gmail.com)
+[debug] [2025-09-12T13:00:17.771Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/kelsoko-bddc4/webApps/-/config [none]
+[debug] [2025-09-12T13:00:18.248Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/kelsoko-bddc4/webApps/-/config 200
+[debug] [2025-09-12T13:00:18.248Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/kelsoko-bddc4/webApps/-/config {"projectId":"kelsoko-bddc4","appId":"1:605278507250:web:29b7b82a7b96bdc8be006b","storageBucket":"kelsoko-bddc4.firebasestorage.app","apiKey":"AIzaSyBm5gnFQofXAOCBpod4OQrwLWDrPy-OTzY","authDomain":"kelsoko-bddc4.firebaseapp.com","messagingSenderId":"605278507250","measurementId":"G-1SLTEG770E"}
+[info] 
+   Thank you for trying our early preview of Next.js support on Firebase Hosting.
+   During the preview, support is best-effort and breaking changes can be expected. Proceed with caution.
+
+   Documentation: https://firebase.google.com/docs/hosting/frameworks/nextjs
+   File a bug: https://github.com/firebase/firebase-tools/issues/new?template=bug_report.md
+   Submit a feature request: https://github.com/firebase/firebase-tools/issues/new?template=feature_request.md
+
+   We'd love to learn from you. Express your interest in helping us shape the future of Firebase Hosting: https://goo.gle/41enW5X
+
+[debug] [2025-09-12T13:00:27.475Z] No OAuth tokens found
+[debug] [2025-09-12T13:00:27.475Z] No OAuth tokens found
+[debug] [2025-09-12T13:00:27.475Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform","https://www.googleapis.com/auth/userinfo.email"]
+[debug] [2025-09-12T13:00:27.476Z] > authorizing via signed-in user (elvinasenga@gmail.com)
+[debug] [2025-09-12T13:00:27.476Z] >>> [apiv2][query] GET https://firebasehosting.googleapis.com/v1beta1/projects/kelsoko-bddc4/sites/kelsoko-bddc4 [none]
+[debug] [2025-09-12T13:00:28.228Z] <<< [apiv2][status] GET https://firebasehosting.googleapis.com/v1beta1/projects/kelsoko-bddc4/sites/kelsoko-bddc4 200
+[debug] [2025-09-12T13:00:28.228Z] <<< [apiv2][body] GET https://firebasehosting.googleapis.com/v1beta1/projects/kelsoko-bddc4/sites/kelsoko-bddc4 {"name":"projects/kelsoko-bddc4/sites/kelsoko-bddc4","defaultUrl":"https://kelsoko-bddc4.web.app","type":"DEFAULT_SITE"}
+[info]   ▲ Next.js 14.2.30
+
+[info]   - Environments: .env
+
+
+[info]    Creating an optimized production build ...
+
+[info]  ⚠ Compiled with warnings
+
+./app/api/prediction-markets/[id]/route.ts
+Attempted import error: 'markets' is not exported from '../route' (imported as 'mainRoute').
+
+Import trace for requested module:
+./app/api/prediction-markets/[id]/route.ts
+
+./app/api/prediction-markets/[id]/route.ts
+Attempted import error: 'outcomes' is not exported from '../route' (imported as 'mainRoute').
+
+Import trace for requested module:
+./app/api/prediction-markets/[id]/route.ts
+
+./app/api/prediction-markets/[id]/route.ts
+Attempted import error: 'markets' is not exported from '../route' (imported as 'mainRoute').
+
+Import trace for requested module:
+./app/api/prediction-markets/[id]/route.ts
+
+./app/api/prediction-markets/[id]/route.ts
+Attempted import error: 'outcomes' is not exported from '../route' (imported as 'mainRoute').
+
+Import trace for requested module:
+./app/api/prediction-markets/[id]/route.ts
+
+[info] 
+
+[info]    Skipping linting
+   Checking validity of types ...
+
+[info] Failed to compile.
+
+
+[info] ./app/api/search/ai/route.ts:32:7
+Type error: No value exists in scope for the shorthand property 'aiAnalysis'. Either declare one or provide an initializer.
+
+  30 |     return NextResponse.json({
+  31 |       query: searchQuery,
+> 32 |       aiAnalysis,
+     |       ^
+  33 |       results,
+  34 |       insights: searchInsights,
+  35 |       totalResults: allResults.length
+
+[info] Next.js build worker exited with code: 1 and signal: null
+
+[debug] [2025-09-12T13:00:46.238Z] Error: ENOENT: no such file or directory, open '/home/user/terminal1/.next/export-marker.json'
+[error] 
+[error] Error: An unexpected error has occurred.
