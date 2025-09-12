@@ -1,4 +1,4 @@
-# Kelsoko Terminal - Next.js Trading Platform
+# kelsoko - Next.js Trading Platform
 
 A modern trading platform built with Next.js, PostgreSQL, Redis, and deployed on AWS EC2.
 

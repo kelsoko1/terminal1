@@ -1,0 +1,85 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Helper function to check if user is the owner of a document
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    // Helper function to check if user is an admin
+    function isAdmin() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'ADMIN';
+    }
+
+    // Users collection
+    match /users/{userId} {
+      // Users can read their own data
+      allow read: if isAuthenticated() && (isOwner(userId) || isAdmin());
+      // Users can update their own data
+      allow update: if isAuthenticated() && isOwner(userId);
+      // Only admins can create/delete users
+      allow create, delete: if isAdmin();
+    }
+
+    // Organizations collection
+    match /organizations/{orgId} {
+      // Anyone can read organizations
+      allow read: if isAuthenticated();
+      // Only admins can create/update/delete organizations
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Subscriptions collection
+    match /subscriptions/{subscriptionId} {
+      // Users can read their own subscriptions
+      allow read: if isAuthenticated() && 
+        (resource.data.userId == request.auth.uid || isAdmin());
+      // Users can create/update their own subscriptions
+      allow create, update: if isAuthenticated() && 
+        (request.resource.data.userId == request.auth.uid || isAdmin());
+      // Only admins can delete subscriptions
+      allow delete: if isAdmin();
+    }
+
+    // Posts collection
+    match /posts/{postId} {
+      // Public posts can be read by anyone
+      // Private posts can only be read by the owner or mentioned users
+      allow read: if isAuthenticated() && 
+        (resource.data.visibility == 'PUBLIC' || 
+         isOwner(resource.data.userId) || 
+         resource.data.mentions.hasAny([request.auth.uid]));
+      
+      // Users can create/update/delete their own posts
+      allow create: if isAuthenticated() && 
+        request.resource.data.userId == request.auth.uid;
+      
+      allow update, delete: if isAuthenticated() && 
+        resource.data.userId == request.auth.uid;
+    }
+
+    // Trades collection
+    match /trades/{tradeId} {
+      // Users can read their own trades
+      allow read: if isAuthenticated() && 
+        (resource.data.userId == request.auth.uid || isAdmin());
+      
+      // Users can create trades for themselves
+      allow create: if isAuthenticated() && 
+        request.resource.data.userId == request.auth.uid;
+      
+      // Trades are immutable after creation
+      allow update, delete: if false;
+    }
+
+    // Default deny all other operations
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
