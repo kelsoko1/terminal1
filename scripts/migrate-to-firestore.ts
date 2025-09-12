@@ -1,176 +1,170 @@
-import { PrismaClient } from '@prisma/client';
 import { userService, organizationService, subscriptionService, postService, tradingService } from '../lib/firebase/services/index';
 import { Timestamp } from 'firebase-admin/firestore';
 
-const prisma = new PrismaClient();
+// Mock data, since we are not using Prisma
+const mockOrganizations = [
+  {
+    id: 'org1',
+    name: 'Test Organization',
+    type: 'company' as any,
+    licenseNumber: '12345',
+    address: '123 Main St',
+    contactEmail: 'contact@testorg.com',
+    contactPhone: '123-456-7890',
+    website: 'https://testorg.com',
+    description: 'A test organization',
+    status: 'active' as any,
+    parentId: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  },
+];
+
+const mockUsers = [
+  {
+    id: 'user1',
+    email: 'admin@testorg.com',
+    name: 'Admin User',
+    password: 'password', // Note: You should handle password hashing properly
+    role: 'ADMIN' as any,
+    status: 'ACTIVE' as any,
+    organizationId: 'org1',
+    department: 'IT',
+    position: 'Developer',
+    employeeId: 'E12345',
+    isOrganizationAdmin: true,
+    image: null,
+    permissions: [],
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  },
+];
+
+const mockSubscriptions = [
+  {
+    id: 'sub1',
+    userId: 'user1',
+    planId: 'basic',
+    status: 'ACTIVE' as any,
+    startDate: new Date(),
+    endDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
+    autoRenew: true,
+    paymentMethod: 'stripe',
+    lastPaymentDate: new Date(),
+    nextPaymentDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  },
+];
+
+const mockPosts = [
+    {
+        id: 'post1',
+        userId: 'user1',
+        content: 'This is a test post',
+        visibility: 'PUBLIC' as any,
+        tradeSymbol: 'BTC',
+        tradeType: 'BUY' as any,
+        tradePrice: 50000,
+        analysisType: 'TECHNICAL' as any,
+        analysisSummary: 'A summary',
+        hashtags: ['test', 'btc'],
+        mentions: [],
+        likes: 0,
+        shares: 0,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+    }
+];
+
+const mockTrades = [
+    {
+        id: 'trade1',
+        userId: 'user1',
+        symbol: 'BTC',
+        quantity: 1,
+        price: 50000,
+        type: 'BUY' as any,
+        status: 'COMPLETED' as any,
+        executedAt: new Date(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+    }
+]
 
 async function migrateUsers() {
   console.log('Starting users migration...');
-  const users = await prisma.user.findMany();
-  
-  for (const user of users) {
+  for (const user of mockUsers) {
     try {
-      await userService.createUser({
-        email: user.email,
-        name: user.name || '',
-        password: user.password, // Note: You should handle password hashing properly in a real migration
-        role: user.role as any,
-        status: user.status as any,
-        organizationId: user.organizationId || undefined,
-        department: user.department || undefined,
-        position: user.position || undefined,
-        employeeId: user.employeeId || undefined,
-        isOrganizationAdmin: user.isOrganizationAdmin || false,
-        image: user.image || undefined,
-        permissions: user.permissions || [],
-        createdAt: user.createdAt,
-        updatedAt: user.updatedAt,
-      }, user.id);
-      
+      const { createdAt, updatedAt, id, ...userData } = user;
+      await userService.createUser(userData as any, id);
       console.log(`Migrated user: ${user.email}`);
     } catch (error) {
       console.error(`Error migrating user ${user.email}:`, error);
     }
   }
-  
   console.log('Users migration completed');
 }
 
 async function migrateOrganizations() {
   console.log('Starting organizations migration...');
-  const organizations = await prisma.organization.findMany();
-  
-  for (const org of organizations) {
+  for (const org of mockOrganizations) {
     try {
-      await organizationService.create(
-        {
-          name: org.name,
-          type: org.type as any,
-          licenseNumber: org.licenseNumber || undefined,
-          address: org.address || undefined,
-          contactEmail: org.contactEmail || undefined,
-          contactPhone: org.contactPhone || undefined,
-          website: org.website || undefined,
-          description: org.description || undefined,
-          status: org.status as any,
-          parentId: org.parentId || undefined,
-          createdAt: org.createdAt,
-          updatedAt: org.updatedAt,
-        },
-        org.id
-      );
-      
+        const { createdAt, updatedAt, id, ...orgData } = org;
+      await organizationService.create(orgData as any, id);
       console.log(`Migrated organization: ${org.name}`);
     } catch (error) {
       console.error(`Error migrating organization ${org.name}:`, error);
     }
   }
-  
   console.log('Organizations migration completed');
 }
 
 async function migrateSubscriptions() {
   console.log('Starting subscriptions migration...');
-  const subscriptions = await prisma.subscription.findMany({
-    include: { plan: true }
-  });
-  
-  for (const sub of subscriptions) {
+  for (const sub of mockSubscriptions) {
     try {
-      await subscriptionService.create(
-        {
-          userId: sub.userId,
-          planId: sub.planId,
-          status: sub.status as any,
-          startDate: sub.startDate,
-          endDate: sub.endDate || undefined,
-          autoRenew: sub.autoRenew,
-          paymentMethod: sub.paymentMethod || undefined,
-          lastPaymentDate: sub.lastPaymentDate || undefined,
-          nextPaymentDate: sub.nextPaymentDate || undefined,
-          createdAt: sub.createdAt,
-          updatedAt: sub.updatedAt,
-        },
-        sub.id
-      );
-      
+        const { createdAt, updatedAt, id, ...subData } = sub;
+      await subscriptionService.create(subData as any, id);
       console.log(`Migrated subscription for user: ${sub.userId}`);
     } catch (error) {
       console.error(`Error migrating subscription ${sub.id}:`, error);
     }
   }
-  
   console.log('Subscriptions migration completed');
 }
 
 async function migratePosts() {
   console.log('Starting posts migration...');
-  const posts = await prisma.post.findMany();
-  
-  for (const post of posts) {
+  for (const post of mockPosts) {
     try {
-      await postService.create(
-        {
-          userId: post.userId,
-          content: post.content,
-          visibility: post.visibility as any,
-          tradeSymbol: post.tradeSymbol || undefined,
-          tradeType: post.tradeType as any,
-          tradePrice: post.tradePrice || undefined,
-          analysisType: post.analysisType as any,
-          analysisSummary: post.analysisSummary || undefined,
-          hashtags: post.hashtags || [],
-          mentions: post.mentions || [],
-          likes: post.likes,
-          shares: post.shares,
-          createdAt: post.createdAt,
-          updatedAt: post.updatedAt,
-        },
-        post.id
-      );
-      
+        const { createdAt, updatedAt, id, ...postData } = post;
+      await postService.create(postData as any, id);
       console.log(`Migrated post: ${post.id}`);
     } catch (error) {
       console.error(`Error migrating post ${post.id}:`, error);
     }
   }
-  
   console.log('Posts migration completed');
 }
 
 async function migrateTrades() {
   console.log('Starting trades migration...');
-  const trades = await prisma.trade.findMany();
-  
-  for (const trade of trades) {
+  for (const trade of mockTrades) {
     try {
-      await tradingService.create(
-        {
-          userId: trade.userId,
-          symbol: trade.symbol,
-          quantity: trade.quantity,
-          price: trade.price,
-          type: trade.type as any,
-          status: trade.status as any,
-          executedAt: trade.createdAt, // Using createdAt as executedAt
-          createdAt: trade.createdAt,
-          updatedAt: trade.updatedAt,
-        },
-        trade.id
-      );
-      
+        const { createdAt, updatedAt, id, ...tradeData } = trade;
+      await tradingService.create(tradeData as any, id);
       console.log(`Migrated trade: ${trade.id}`);
     } catch (error) {
       console.error(`Error migrating trade ${trade.id}:`, error);
     }
   }
-  
   console.log('Trades migration completed');
 }
 
 async function runMigrations() {
   console.log('Starting Firestore migration...');
-  
+
   try {
     // Run migrations in order to respect foreign key constraints
     await migrateOrganizations();
@@ -178,13 +172,12 @@ async function runMigrations() {
     await migrateSubscriptions();
     await migratePosts();
     await migrateTrades();
-    
+
     console.log('All migrations completed successfully!');
   } catch (error) {
     console.error('Migration failed:', error);
     process.exit(1);
   } finally {
-    await prisma.$disconnect();
     process.exit(0);
   }
 }

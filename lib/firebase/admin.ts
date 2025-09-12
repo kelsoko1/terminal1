@@ -7,9 +7,9 @@ import { getStorage } from 'firebase-admin/storage';
 const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_JSON
   ? JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON)
   : {
-      projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+      project_id: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+      client_email: process.env.FIREBASE_CLIENT_EMAIL,
+      private_key: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
     };
 
 // Initialize Firebase Admin

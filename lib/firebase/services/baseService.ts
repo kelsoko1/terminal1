@@ -51,7 +51,7 @@ export class BaseService<T extends { id?: string }> {
     const updateData = {
       ...data,
       updatedAt: now,
-    } as Partial<T>;
+    } as unknown as Partial<T>;
     
     await docRef.update(updateData);
     
