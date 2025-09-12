@@ -1,0 +1,32 @@
+export const challenges = [
+  {
+    id: 1,
+    title: 'Smash & Grab',
+    time: 'Now',
+    distance: '1.5M',
+    type: 'skull',
+    payout: '$$$',
+    image: '/images/smash-grab.jpg',
+    description: 'Break in and retrieve the package. High risk, high reward.',
+  },
+  {
+    id: 2,
+    title: 'Creative Accounting',
+    time: '20 min',
+    distance: '2.3M',
+    type: 'briefcase',
+    payout: '$$',
+    image: '/images/creative-accounting.jpg',
+    description: 'Help balance the books in a way that benefits everyone.',
+  },
+  {
+    id: 3,
+    title: 'Photo Recon',
+    time: 'Tomorrow',
+    distance: '0.8M',
+    type: 'camera',
+    payout: '$',
+    image: '/images/photo-recon.jpg',
+    description: 'Snap a photo of the target and upload for verification.',
+  },
+]; 

@@ -1,0 +1,182 @@
+/* Portfolio mobile optimizations */
+@media (max-width: 768px) {
+  /* Enhanced portfolio header for mobile */
+  .portfolio-page .grid-cols-4 {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 0.75rem !important;
+  }
+  
+  .portfolio-page .text-2xl {
+    font-size: 1.25rem !important;
+    line-height: 1.75rem !important;
+  }
+  
+  .portfolio-page .text-xl {
+    font-size: 1.125rem !important;
+    line-height: 1.75rem !important;
+  }
+  
+  /* Compact summary cards */
+  .portfolio-page .card .p-4 {
+    padding: 0.75rem !important;
+  }
+  
+  .portfolio-page .h-8.w-8 {
+    height: 1.5rem !important;
+    width: 1.5rem !important;
+  }
+  
+  /* Optimize charts for mobile */
+  .recharts-wrapper .recharts-legend-wrapper {
+    font-size: 10px !important;
+    bottom: 0 !important;
+  }
+  
+  .recharts-wrapper .recharts-legend-item {
+    margin-right: 8px !important;
+  }
+  
+  .recharts-wrapper .recharts-legend-item-text {
+    margin-left: 2px !important;
+  }
+  
+  /* Improve tooltip readability on mobile */
+  .recharts-tooltip-wrapper {
+    max-width: 80vw !important;
+  }
+  
+  .recharts-default-tooltip {
+    padding: 8px !important;
+    border-radius: 6px !important;
+  }
+  
+  .recharts-tooltip-label {
+    font-size: 12px !important;
+    margin-bottom: 4px !important;
+  }
+  
+  .recharts-tooltip-item-list {
+    font-size: 11px !important;
+  }
+  
+  /* Optimize axis labels for mobile */
+  .recharts-cartesian-axis-tick-value {
+    font-size: 10px !important;
+  }
+  
+  /* Optimize card layouts */
+  .card {
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s ease;
+  }
+  
+  .card:active {
+    transform: scale(0.98);
+  }
+  
+  /* Ensure touch targets are large enough */
+  .portfolio-page button, 
+  .portfolio-page a, 
+  .portfolio-page select, 
+  .portfolio-page [role="button"] {
+    min-height: 40px;
+    touch-action: manipulation;
+  }
+  
+  /* Ensure tables are scrollable on mobile */
+  .table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 8px;
+  }
+  
+  /* Make portfolio page tabs more touch-friendly */
+  .portfolio-page [role="tablist"] [role="tab"] {
+    height: 40px;
+    padding-left: 12px;
+    padding-right: 12px;
+    font-size: 14px;
+  }
+  
+  /* Ensure proper safe area insets for portfolio content */
+  .portfolio-container {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+  
+  /* Adjust pie chart for better mobile display */
+  .portfolio-page .recharts-pie {
+    transform: scale(0.9);
+  }
+  
+  /* Make portfolio cards more compact */
+  .portfolio-page .card {
+    padding: 12px;
+    margin-bottom: 12px;
+  }
+  
+  /* Enhanced mobile typography and spacing */
+  .portfolio-page h1 {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .portfolio-page h2 {
+    font-size: 1.25rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .portfolio-page h3 {
+    font-size: 1rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .portfolio-page p, 
+  .portfolio-page .text-sm {
+    font-size: 0.875rem;
+  }
+  
+  /* Mobile-specific holdings cards */
+  .portfolio-page .lg\\:grid-cols-3 {
+    grid-template-columns: 1fr !important;
+    gap: 1rem !important;
+  }
+  
+  /* Compact futures tables on mobile */
+  .portfolio-page table {
+    font-size: 0.75rem !important;
+  }
+  
+  .portfolio-page th,
+  .portfolio-page td {
+    padding: 0.5rem 0.25rem !important;
+  }
+  
+  /* Stack buttons vertically on small screens */
+  .portfolio-page .flex.gap-2 {
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+  }
+  
+  .portfolio-page .flex.gap-3 {
+    flex-direction: column !important;
+    gap: 0.75rem !important;
+  }
+  
+  /* Better modal sizing on mobile */
+  .portfolio-page [role="dialog"] {
+    margin: 1rem !important;
+    max-height: calc(100vh - 2rem) !important;
+  }
+  
+  /* Improve spacing for mobile */
+  .portfolio-page .space-y-8 {
+    margin-top: 1rem;
+  }
+  
+  /* Make sure the tab content is properly spaced */
+  .portfolio-page [role="tabpanel"] {
+    padding-top: 0.5rem;
+  }
+}

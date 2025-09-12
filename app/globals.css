@@ -1,0 +1,478 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground-rgb: 0, 0, 0;
+  --background-start-rgb: 214, 219, 220;
+  --background-end-rgb: 255, 255, 255;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --foreground-rgb: 255, 255, 255;
+    --background-start-rgb: 0, 0, 0;
+    --background-end-rgb: 0, 0, 0;
+  }
+}
+
+@layer base {
+  :root {
+    /* Bloomberg-inspired Light Theme */
+    --background: 210 40% 98%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 210 100% 35%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222 47% 11%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 222 47% 11%;
+    
+    /* Financial Chart Colors - Light Theme */
+    --positive: 142 76% 36%;
+    --negative: 0 84% 60%;
+    --neutral: 210 100% 35%;
+    --chart-1: 210 100% 35%;
+    --chart-2: 142 76% 36%;
+    --chart-3: 32 94% 44%;
+    --chart-4: 262 83% 58%;
+    --chart-5: 0 84% 60%;
+    
+    /* Investor-specific theme colors - Light */
+    --investor-success: 142 76% 36%;
+    --investor-warning: 32 94% 44%;
+    --investor-danger: 0 84% 60%;
+    --investor-info: 210 100% 35%;
+    --investor-secondary: 262 83% 58%;
+    --investor-muted: 215 16% 47%;
+    --investor-border: 214 32% 91%;
+    --investor-background: 210 40% 98%;
+    --investor-card: 0 0% 100%;
+    --investor-text: 222 47% 11%;
+    --investor-text-muted: 215 16% 47%;
+    
+    /* Risk level colors - Light */
+    --risk-low: 142 76% 36%;
+    --risk-medium: 32 94% 44%;
+    --risk-high: 0 84% 60%;
+    
+    /* Status colors - Light */
+    --status-active: 142 76% 36%;
+    --status-pending: 32 94% 44%;
+    --status-canceled: 0 84% 60%;
+    --status-expired: 215 16% 47%;
+    --status-failed: 0 84% 60%;
+    
+    --radius: 0.5rem;
+  }
+  .dark {
+    /* Bloomberg Terminal Dark Theme - Modified for Pure Black */
+    --background: 0 0% 0%;
+    --foreground: 0 0% 100%;
+    --card: 0 0% 5%;
+    --card-foreground: 0 0% 100%;
+    --popover: 0 0% 5%;
+    --popover-foreground: 0 0% 100%;
+    --primary: 210 100% 52%;
+    --primary-foreground: 0 0% 0%;
+    --secondary: 0 0% 10%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 0 0% 10%;
+    --muted-foreground: 0 0% 70%;
+    --accent: 0 0% 10%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 15%;
+    --input: 0 0% 15%;
+    --ring: 0 0% 83.9%;
+    
+    /* Financial Chart Colors - Dark Theme */
+    --positive: 142 70% 45%;
+    --negative: 0 73% 61%;
+    --neutral: 210 100% 52%;
+    --chart-1: 210 100% 52%;
+    --chart-2: 142 70% 45%;
+    --chart-3: 32 94% 44%;
+    --chart-4: 262 83% 58%;
+    --chart-5: 0 73% 61%;
+    
+    /* Investor-specific theme colors - Dark */
+    --investor-success: 142 70% 45%;
+    --investor-warning: 32 94% 44%;
+    --investor-danger: 0 73% 61%;
+    --investor-info: 210 100% 52%;
+    --investor-secondary: 262 83% 58%;
+    --investor-muted: 0 0% 70%;
+    --investor-border: 0 0% 15%;
+    --investor-background: 0 0% 0%;
+    --investor-card: 0 0% 5%;
+    --investor-text: 0 0% 100%;
+    --investor-text-muted: 0 0% 70%;
+    
+    /* Risk level colors - Dark */
+    --risk-low: 142 70% 45%;
+    --risk-medium: 32 94% 44%;
+    --risk-high: 0 73% 61%;
+    
+    /* Status colors - Dark */
+    --status-active: 142 70% 45%;
+    --status-pending: 32 94% 44%;
+    --status-canceled: 0 73% 61%;
+    --status-expired: 0 0% 70%;
+    --status-failed: 0 73% 61%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Custom scrollbar for Bloomberg-like experience */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: hsl(var(--secondary));
+  border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground));
+  border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--primary));
+}
+
+/* Financial data styling */
+.positive {
+  color: hsl(var(--positive));
+}
+
+.negative {
+  color: hsl(var(--negative));
+}
+
+.neutral {
+  color: hsl(var(--neutral));
+}
+
+/* Investor-specific utility classes */
+.investor-success {
+  color: hsl(var(--investor-success));
+}
+
+.investor-warning {
+  color: hsl(var(--investor-warning));
+}
+
+.investor-danger {
+  color: hsl(var(--investor-danger));
+}
+
+.investor-info {
+  color: hsl(var(--investor-info));
+}
+
+.investor-secondary {
+  color: hsl(var(--investor-secondary));
+}
+
+.investor-muted {
+  color: hsl(var(--investor-muted));
+}
+
+/* Background variants for investor components */
+.investor-bg-success {
+  background-color: hsl(var(--investor-success) / 0.1);
+}
+
+.investor-bg-warning {
+  background-color: hsl(var(--investor-warning) / 0.1);
+}
+
+.investor-bg-danger {
+  background-color: hsl(var(--investor-danger) / 0.1);
+}
+
+.investor-bg-info {
+  background-color: hsl(var(--investor-info) / 0.1);
+}
+
+.investor-bg-secondary {
+  background-color: hsl(var(--investor-secondary) / 0.1);
+}
+
+/* Risk level styling */
+.risk-low {
+  color: hsl(var(--risk-low));
+}
+
+.risk-medium {
+  color: hsl(var(--risk-medium));
+}
+
+.risk-high {
+  color: hsl(var(--risk-high));
+}
+
+.risk-bg-low {
+  background-color: hsl(var(--risk-low) / 0.1);
+}
+
+.risk-bg-medium {
+  background-color: hsl(var(--risk-medium) / 0.1);
+}
+
+.risk-bg-high {
+  background-color: hsl(var(--risk-high) / 0.1);
+}
+
+/* Status styling */
+.status-active {
+  color: hsl(var(--status-active));
+}
+
+.status-pending {
+  color: hsl(var(--status-pending));
+}
+
+.status-canceled {
+  color: hsl(var(--status-canceled));
+}
+
+.status-expired {
+  color: hsl(var(--status-expired));
+}
+
+.status-failed {
+  color: hsl(var(--status-failed));
+}
+
+.status-bg-active {
+  background-color: hsl(var(--status-active) / 0.1);
+}
+
+.status-bg-pending {
+  background-color: hsl(var(--status-pending) / 0.1);
+}
+
+.status-bg-canceled {
+  background-color: hsl(var(--status-canceled) / 0.1);
+}
+
+.status-bg-expired {
+  background-color: hsl(var(--status-expired) / 0.1);
+}
+
+.status-bg-failed {
+  background-color: hsl(var(--status-failed) / 0.1);
+}
+
+/* Mobile device safe area insets */
+.safe-area-inset-top {
+  padding-top: env(safe-area-inset-top, 0);
+}
+
+.safe-area-inset {
+  padding-top: env(safe-area-inset-top, 0);
+  padding-bottom: env(safe-area-inset-bottom, 0);
+  padding-left: env(safe-area-inset-left, 0);
+  padding-right: env(safe-area-inset-right, 0);
+}
+
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 16px);
+}
+
+/* Touch-friendly elements */
+.touch-manipulation {
+  touch-action: manipulation;
+}
+
+/* Mobile-friendly containers */
+.mobile-container {
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+@media (min-width: 640px) {
+  .mobile-container {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+}
+
+/* Mobile-friendly cards */
+.mobile-card {
+  border-radius: 0;
+  margin-left: -1rem;
+  margin-right: -1rem;
+  width: calc(100% + 2rem);
+}
+
+@media (min-width: 640px) {
+  .mobile-card {
+    border-radius: 0.5rem;
+    margin-left: 0;
+    margin-right: 0;
+    width: 100%;
+  }
+}
+
+/* Mobile-friendly touch targets */
+.mobile-touch-target {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Mobile-friendly spacing */
+.mobile-spacing {
+  padding: 0.75rem;
+}
+
+@media (min-width: 640px) {
+  .mobile-spacing {
+    padding: 1.25rem;
+  }
+}
+
+/* Mobile-friendly text */
+.mobile-text-base {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
+@media (min-width: 640px) {
+  .mobile-text-base {
+    font-size: 1rem;
+    line-height: 1.5rem;
+  }
+}
+
+/* Extra small screens */
+@media (min-width: 320px) {
+  .xs\:inline {
+    display: inline;
+  }
+  .xs\:hidden {
+    display: none;
+  }
+}
+
+/* Mobile-friendly grid layouts */
+.mobile-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+}
+
+@media (min-width: 640px) {
+  .mobile-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .mobile-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.25rem;
+  }
+}
+
+/* Mobile-friendly buttons */
+.mobile-button {
+  height: 2.75rem;
+  font-size: 0.875rem;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+@media (min-width: 640px) {
+  .mobile-button {
+    height: 2.5rem;
+    font-size: 0.875rem;
+  }
+}
+
+/* Mobile container for consistent padding */
+.mobile-container {
+  padding-left: 1rem;
+  padding-right: 1rem;
+  width: 100%;
+  margin: 0 auto;
+}
+
+@media (min-width: 640px) {
+  .mobile-container {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+}
+
+/* Safe area insets for mobile devices */
+.safe-area-inset {
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+.safe-area-top {
+  padding-top: env(safe-area-inset-top);
+}
+
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Mobile-friendly card layouts */
+.mobile-card {
+  border-radius: 0.75rem;
+  overflow: hidden;
+  height: 100%;
+}
+
+/* Mobile-friendly typography */
+.mobile-heading {
+  font-size: 1.25rem;
+  line-height: 1.75rem;
+  font-weight: 600;
+}
+
+@media (min-width: 640px) {
+  .mobile-heading {
+    font-size: 1.5rem;
+    line-height: 2rem;
+  }
+}
+
+.mobile-text {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
+@media (min-width: 640px) {
+  .mobile-text {
+    font-size: 1rem;
+    line-height: 1.5rem;
+  }
+}

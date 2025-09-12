@@ -1,0 +1,233 @@
+/* TikTokStyleFeed.css */
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Hide scrollbar for IE, Edge and Firefox */
+.hide-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+/* Safe area insets for mobile devices */
+.tiktok-feed-container {
+  padding-top: env(safe-area-inset-top, 0);
+  padding-bottom: env(safe-area-inset-bottom, 0);
+  padding-left: env(safe-area-inset-left, 0);
+  padding-right: env(safe-area-inset-right, 0);
+}
+
+/* Smooth transitions */
+* {
+  transition-property: background-color, border-color, color, fill, stroke, opacity, box-shadow, transform;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Card hover effects */
+.card-hover-effect {
+  transition: all 0.3s ease;
+}
+
+.card-hover-effect:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+/* Gradient backgrounds */
+.bg-gradient-orange {
+  background: linear-gradient(135deg, #ff9500, #ff5e3a);
+}
+
+/* Custom animations */
+@keyframes pulse-orange {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+.animate-pulse-orange {
+  animation: pulse-orange 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Custom badge styles */
+.badge-trending {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+}
+
+/* Responsive layout styles */
+.responsive-layout {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  flex-direction: column;
+}
+
+@media (min-width: 1024px) {
+  .responsive-layout {
+    flex-direction: row;
+  }
+}
+
+/* Ensure content fits properly */
+.content-fit {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Ensure sidebars are properly sized */
+.sidebar-column {
+  width: 100%;
+  min-width: 100%;
+  order: 2;
+}
+
+.main-column {
+  max-width: 100%;
+  flex-grow: 1;
+  order: 1;
+}
+
+@media (min-width: 1024px) {
+  .sidebar-column {
+    width: 260px;
+    min-width: 260px;
+    order: initial;
+  }
+  
+  .main-column {
+    max-width: 100%;
+    flex-grow: 1;
+    order: initial;
+  }
+}
+
+/* Ensure proper spacing in feed items */
+.feed-item {
+  margin-bottom: 1rem;
+  overflow: visible;
+}
+
+/* Complete badge-trending styles */
+.badge-trending {
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1;
+  padding: 0.25rem 0.5rem;
+}
+
+/* Custom scrollbar for the main content */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #ff9500;
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #ff5e3a;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1200px) {
+  .responsive-layout {
+    flex-direction: column;
+  }
+  
+  .sidebar {
+    width: 100%;
+    margin-bottom: 1rem;
+  }
+}
+
+/* Mobile-specific adjustments */
+@media (max-width: 640px) {
+  .feed-item {
+    margin-bottom: 0.5rem;
+    border-radius: 0;
+  }
+  
+  .mobile-full-width {
+    width: 100% !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    border-radius: 0 !important;
+    border-left: none !important;
+    border-right: none !important;
+  }
+  
+  .mobile-touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  .mobile-compact-ui {
+    padding: 0.75rem !important;
+  }
+  
+  .mobile-stack {
+    flex-direction: column !important;
+  }
+}
+
+/* Touch-friendly elements */
+.touch-manipulation {
+  touch-action: manipulation;
+}
+
+/* Bottom safe area for mobile devices */
+.mobile-bottom-safe {
+  padding-bottom: env(safe-area-inset-bottom, 16px);
+}
+
+/* Slide-in modal animation for challenge details */
+@keyframes slide-in-right {
+  from {
+    transform: translateX(100%);
+    opacity: 0.7;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Challenge list scroll area */
+.kelsoko-challenge-list-scroll {
+  max-height: 70vh;
+  overflow-y: auto;
+  padding-right: 0.5rem;
+}
+
+/* Compact challenge card */
+.kelsoko-challenge-card {
+  border-left: 4px solid hsl(var(--investor-danger));
+  background: #23232a;
+  border-radius: 0.5rem;
+  padding: 0.5rem 1rem;
+  margin-bottom: 0.5rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.kelsoko-challenge-card:hover {
+  background: #2a2a33;
+}
